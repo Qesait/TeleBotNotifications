@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"telebotnotifications/spotify"
+	"TeleBotNotifications/spotify"
 )
 
 func server(port uint, c chan string) {
@@ -40,24 +40,28 @@ func main() {
 		panic("no client credentials")
 	}
 	
-	spotify_client := spotify.NewClient(client_id, client_secret, redirect_uri, scope)
+	spotify_client, _ := spotify.NewClient(client_id, client_secret, redirect_uri, scope)
 	
 	if authorization_code == "" {
 		go server(serverPort, c)
 		time.Sleep(100 * time.Millisecond)
 
-		var auth_url = spotify_client.GenerateAuthUrl()
-		fmt.Println(auth_url)
+		var auth_url, _ = spotify_client.GenerateAuthUrl()
+		fmt.Println(*auth_url)
 
 		authorization_code = <-c // not access token
 		fmt.Println(authorization_code)
 	}
 
 	token, _ := spotify_client.RequestAccessToken(&authorization_code)
-	fmt.Println("Access token: ", token.AccessToken)
-	fmt.Println("Token type: ", token.TokenType)
-	fmt.Println("Scope: ", token.Scope)
-	fmt.Println("Expires in: ", token.ExpiresIn)
-	fmt.Println("Refresh token: ", token.RefreshToken)
-
+	fmt.Println(*token)
+	artists, err := spotify_client.GetFollowedArtists(token)
+	fmt.Println("")
+	fmt.Println(err)
+	if err == nil {
+		fmt.Println(len(artists))
+		for i:=0; i<len(artists); i++ {
+			fmt.Println(artists[i])
+		}
+	}
 }
