@@ -5,8 +5,9 @@ import (
 	// "fmt"
 	// "net/http"
 	"fmt"
-	"os"
 	"net/url"
+	"os"
+
 	// "time"
 	// "TeleBotNotifications/spotify"
 	"TeleBotNotifications/telegram"
@@ -51,14 +52,14 @@ func GetCodeFromUrl(message string) (*string, error) {
 }
 
 func main() {
-	bot_token := os.Getenv("telegram_bot_token")
+	bot_token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if bot_token == "" {
 		panic("no bot credentials")
 	}
 	bot := telegram.NewBot(bot_token)
 	bot.AddCommand("auth", GetCodeFromUrl)
 	bot.AddCommand("start", Greet)
-	bot.Go(8888)
+	bot.Run(8888)
 
 	// var client_id = os.Getenv("spotify_client_id")
 	// var client_secret = os.Getenv("spotify_client_secret")
@@ -68,9 +69,9 @@ func main() {
 	// if client_id == "" || client_secret == "" {
 	// 	panic("no client credentials")
 	// }
-	
+
 	// spotify_client, _ := spotify.NewClient(client_id, client_secret, redirect_uri, scope)
-	
+
 	// if authorization_code == "" {
 	// 	go server(serverPort, c)
 	// 	time.Sleep(100 * time.Millisecond)

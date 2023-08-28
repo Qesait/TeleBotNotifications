@@ -461,7 +461,7 @@ func Test_getFollowedArtists(t *testing.T) {
 					}
 				}
 				`,
-				expected_request: "/me/following",
+				expected_request: "/v1/me/following",
 				expected_artists: []Artist{
 					{"href-1", "1", "artist-1"},
 					{"href-2", "2", "artist-2"},

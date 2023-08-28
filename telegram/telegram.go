@@ -129,11 +129,11 @@ func getNewMessages(url string) ([]message, error) {
 
 }
 
-func (b *Bot) Go(port uint) {
+func (b *Bot) Run(port uint) {
 	lastUpdate := 0
 
 	for {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second)
 		url := createUpdateUrl(b.token, lastUpdate)
 		messages, err := getNewMessages(url)
 		if err != nil {
