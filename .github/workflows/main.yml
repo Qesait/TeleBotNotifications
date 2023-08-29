@@ -80,11 +80,14 @@ jobs:
             # Pull the Docker Image 
             docker pull ghcr.io/${{ env.repository }}:latest
 
+            # Set env variables
+            export TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            export SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}
+            export SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }}
+
             # Run a new container from a new image
             docker run -d -t ghcr.io/${{ env.repository }}:latest \
-            -e TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN \
-            -e SPOTIFY_CLIENT_ID=$SPOTIFY_CLIENT_ID \
-            -e SPOTIFY_CLIENT_SECRET=$SPOTIFY_CLIENT_SECRET \
+            -e TELEGRAM_BOT_TOKEN -e SPOTIFY_CLIENT_ID -e SPOTIFY_CLIENT_SECRET \
             --restart always \
             --publish 8888:8888 \
             --name $(echo $CONTAINER_NAME)
