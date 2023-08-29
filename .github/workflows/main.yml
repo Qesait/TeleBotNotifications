@@ -61,7 +61,7 @@ jobs:
       - id: lower-repo
         run: echo "repository=$(echo ${GITHUB_REPOSITORY,,})" >> $GITHUB_ENV
 
-      - uses: appleboy/ssh-action@master
+      - uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
