@@ -23,7 +23,7 @@ jobs:
       - name: Test
         run: go test -v ./...
 
-  push_to_github_container_registry:
+  push_to_ghcr:
     runs-on: ubuntu-latest
     needs: build_and_test
     steps:
@@ -40,8 +40,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.ACCESS_TOKEN }}
 
+      - id: lower-repo
+        run: echo "repository=$(echo ${GITHUB_REPOSITORY,,})" >> $GITHUB_ENV
+
       - name: Pushing Image to Github Container Registry
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghcr.io/${{ github.repository | lower }}:latest
+          tags: ghcr.io/${{ env.repository }}:latest
