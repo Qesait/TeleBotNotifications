@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type CommandHandler func(string) (*string, error)
+type CommandHandler func(Message)
 
 type command struct {
 	Keyword string
@@ -129,6 +129,15 @@ func getNewMessages(url string) ([]message, error) {
 
 }
 
+type Message struct {
+	Bot  *Bot
+	User struct {
+		ChatId int
+		UserId int
+	}
+	Text string
+}
+
 func (b *Bot) Run(port uint) {
 	lastUpdate := 0
 
@@ -155,16 +164,17 @@ func (b *Bot) Run(port uint) {
 			for j := 0; j < len(b.commands); j++ {
 				// fmt.Println(messages[i].Text, b.commands[j].Keyword)
 				if strings.HasPrefix(messages[i].Text, b.commands[j].Keyword) {
-					text:= strings.TrimSpace(strings.TrimPrefix(messages[i].Text, b.commands[j].Keyword))
+					text := strings.TrimSpace(strings.TrimPrefix(messages[i].Text, b.commands[j].Keyword))
 					fmt.Println("<-", text)
-					response, err := b.commands[j].Handler(text)
-					if err != nil {
-						fmt.Printf("Command \"%s\" failed with error: %s\n", b.commands[j].Keyword, err)
-						b.SendMessage("Something went wrong(", messages[i].From)	
-					} else {
-						fmt.Println("->", *response)
-						b.SendMessage(*response, messages[i].From)
-					}
+
+					b.commands[j].Handler(Message{
+						Bot: b,
+						User: struct {
+							ChatId int
+							UserId int
+						}{messages[i].Chat, messages[i].From},
+						Text: text,
+					})
 					break
 				}
 			}

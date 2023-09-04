@@ -11,6 +11,7 @@ import (
 	// "time"
 	// "TeleBotNotifications/spotify"
 	"TeleBotNotifications/telegram"
+	"TeleBotNotifications/db"
 )
 
 // func server(port uint, c chan string) {
@@ -34,24 +35,30 @@ import (
 // var c = make(chan string, 1)
 // var authorization_code = ""
 
-func Greet(message string) (*string, error) {
+func Greet(message telegram.Message) {
 	response := "Greetings!"
-	return &response, nil
+	message.Bot.SendMessage(response, message.User.ChatId)
 }
 
-func GetCodeFromUrl(message string) (*string, error) {
-	parsedURL, err := url.Parse(message)
+func GetCodeFromUrl(message telegram.Message) {
+	parsedURL, err := url.Parse(message.Text)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing URL: %s", err)
+		message.Bot.SendMessage(fmt.Sprintf("error parsing URL: %s", err), message.User.ChatId)
+		fmt.Println("error parsing URL: ", err)
 	}
 	code := parsedURL.Query().Get("code")
 	if code == "" {
-		return nil, fmt.Errorf("couldn't extract code from url: %s", message)
+		message.Bot.SendMessage(fmt.Sprintf("couldn't extract code from url: %s", message.Text), message.User.ChatId)
+		fmt.Println("couldn't extract code from url: ", message.Text)
 	}
-	return &code, nil
+	message.Bot.SendMessage(code, message.User.ChatId)
 }
 
 func main() {
+	db := db.NewDB("/var/lib/spotify_notifications_bot/save.json")
+	db.Load()
+
+
 	bot_token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if bot_token == "" {
 		panic("no bot credentials")
@@ -59,6 +66,7 @@ func main() {
 	bot := telegram.NewBot(bot_token)
 	bot.AddCommand("auth", GetCodeFromUrl)
 	bot.AddCommand("start", Greet)
+	bot.AddCommand("start2", Greet)
 	bot.Run(8888)
 
 	// var client_id = os.Getenv("spotify_client_id")
