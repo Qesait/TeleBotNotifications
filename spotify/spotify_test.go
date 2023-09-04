@@ -500,3 +500,147 @@ func Test_getFollowedArtists(t *testing.T) {
 		})
 	}
 }
+
+
+func Test_getArtistAlbums(t *testing.T) {
+	type args struct {
+		current_token    OAuth2Token
+		statusCode       int
+		response         string
+		expected_request string
+		expected_result []Album
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			args: args{
+				current_token: OAuth2Token{
+					AccessToken:  "sample-access-token",
+					TokenType:    "bearer",
+					Scope:        "read write",
+					Expires:      time.Now().Add(time.Hour),
+					RefreshToken: "sample-refresh-token",
+				},
+				statusCode: http.StatusOK,
+				response: `
+				{
+					"href": "https://api.spotify.com/v1/me/shows?offset=0&limit=20",
+					"limit": 20,
+					"next": "https://api.spotify.com/v1/me/shows?offset=1&limit=1",
+					"offset": 0,
+					"previous": "https://api.spotify.com/v1/me/shows?offset=1&limit=1",
+					"total": 4,
+					"items": [
+					  {
+						"album_type": "album",
+						"total_tracks": 9,
+						"external_urls": {
+						  "spotify": "string"
+						},
+						"id": "2up3OPMp9Tb4dAKM2er111",
+						"images": [
+						  {
+							"url": "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+							"height": 300,
+							"width": 300
+						  }
+						],
+						"name": "string-2",
+						"release_date": "2001-12-01",
+						"release_date_precision": "year",
+						"type": "album",
+						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"artists": [
+						  {
+							"external_urls": {
+							  "spotify": "string"
+							},
+							"href": "string",
+							"id": "string",
+							"name": "string",
+							"type": "artist",
+							"uri": "string"
+						  }
+						],
+						"album_group": "compilation"
+					  },
+					  {
+						"album_type": "compilation",
+						"total_tracks": 9,
+						"external_urls": {
+						  "spotify": "string"
+						},
+						"id": "2up3OPMp9Tb4dAKM2erWXQ",
+						"images": [
+						  {
+							"url": "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+							"height": 300,
+							"width": 300
+						  }
+						],
+						"name": "string",
+						"release_date": "1981-12-01",
+						"release_date_precision": "year",
+						"type": "album",
+						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"artists": [
+						  {
+							"external_urls": {
+							  "spotify": "string"
+							},
+							"href": "string",
+							"id": "string",
+							"name": "string",
+							"type": "artist",
+							"uri": "string"
+						  }
+						],
+						"album_group": "compilation"
+					  }
+					]
+				  }
+				`,
+				expected_request: "/v1/artists/albums",
+				expected_result: []Album{
+					{"2up3OPMp9Tb4dAKM2er111", "album", "string-2", time.Date(2001, 12, 1, 0, 0, 0, 0, time.UTC)},
+					{"2up3OPMp9Tb4dAKM2erWXQ", "compilation", "string", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			client := newClient(t, http.MethodGet, tt.args.statusCode, tt.args.expected_request, tt.args.response)
+
+			albums, err := client.getArtistAlbums(&tt.args.current_token, Artist{"", "id", ""}, "", 2, 0)
+
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("Error decoding response: %v", err)
+				}
+				return
+			} else if tt.wantErr {
+				t.Error("Error expected")
+				return
+			}
+
+			if len(albums) != len(tt.args.expected_result) {
+				t.Errorf("Wrond result. \nExpected: \t%+v, \nGot: \t%+v", &tt.args.expected_result, albums)
+				return
+			}
+
+			for i := 0; i < len(tt.args.expected_result); i++ {
+				if tt.args.expected_result[i] != albums[i] {
+					t.Errorf("Wrond result. \nExpected: \t%+v, \nGot: \t%+v", &tt.args.expected_result, albums)
+				}
+			}
+		})
+	}
+}

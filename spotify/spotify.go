@@ -177,7 +177,7 @@ type FollowedArtistsResponse struct {
 		Next  *string  `json:"next"`
 		Items []Artist `json:"items"`
 	} `json:"artists"`
-} 
+}
 
 func (c *Client) getFollowedArtists(token *OAuth2Token, request_limit uint) ([]Artist, error) {
 	getRequestUrl := func(limit uint) (*string, error) {
@@ -240,4 +240,96 @@ func (c *Client) getFollowedArtists(token *OAuth2Token, request_limit uint) ([]A
 
 func (c *Client) GetFollowedArtists(token *OAuth2Token) ([]Artist, error) {
 	return c.getFollowedArtists(token, 50)
+}
+
+type Album struct {
+	Id         string
+	Album_type string
+	// Url string `json:"next"`
+	Name         string
+	Release_date time.Time
+	// Artists      []Artist
+}
+
+type album struct {
+	Id         string `json:"id"`
+	Album_type string `json:"album_type"`
+	// Url string `json:"next"`
+	Name         string `json:"name"`
+	Release_date string `json:"release_date"`
+	// Artists      []Artist `json:"artists"`
+}
+
+type getArtistAlbumsResponse struct {
+	Total int `json:"total"`
+	Albums []album `json:"items"`
+}
+
+func decodeAlbulmsResponse(response *http.Response) ([]Album, error) {
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %s", response.Status)
+	}
+
+	responseData := &getArtistAlbumsResponse{}
+	err := json.NewDecoder(response.Body).Decode(responseData)
+	if err != nil {
+		return nil, err
+	}
+
+	albums := make([]Album, 0, len(responseData.Albums))
+	for i := 0; i < len(responseData.Albums); i++ {
+		t, err := time.Parse("2006-01-02", responseData.Albums[i].Release_date)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing date: %s", err)
+		}
+		album := Album{
+			Id:           responseData.Albums[i].Id,
+			Album_type:   responseData.Albums[i].Album_type,
+			Name:         responseData.Albums[i].Name,
+			Release_date: t,
+			// Artists: responseData.albums[i].Artists,
+		}
+		albums = append(albums, album)
+	}
+
+	return albums, nil
+}
+
+func (c *Client) getArtistAlbums(token *OAuth2Token, artist Artist, include_groups string, limit uint, offset uint) ([]Album, error) {
+	resource := "/v1/artists/albums"
+	params := url.Values{}
+	params.Add("id", artist.Id)
+	params.Add("include_groups", include_groups)
+	params.Add("limit", strconv.FormatUint(uint64(limit), 10))
+	params.Add("offset", strconv.FormatUint(uint64(offset), 10))
+
+	u, err := url.ParseRequestURI(apiUrl)
+	if err != nil {
+		return nil, err
+	}
+	u.Path = resource
+	u.RawQuery = params.Encode()
+	requestUrl := u.String()
+
+	if token.Expired() {
+		refreshed_token, err := c.refreshAccessToken(token)
+		if err != nil {
+			return nil, err
+		}
+		token = refreshed_token
+	}
+
+	request, err := http.NewRequest(http.MethodGet, requestUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Add("Authorization", "Bearer  "+token.AccessToken)
+
+	response, err := c.client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	return decodeAlbulmsResponse(response)
 }
