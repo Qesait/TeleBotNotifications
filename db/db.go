@@ -5,30 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sync"
 	"os"
+	"sync"
+	"time"
 )
 
 type User struct {
-	UserId int                 `json:"user_id"`
-	ChatId int                 `json:"chat_id"`
-	Token  spotify.OAuth2Token `json:"token"`
-	Artist []spotify.Artist    `json:"artists"`
+	UserId    int                 `json:"user_id"`
+	ChatId    int                 `json:"chat_id"`
+	Token     spotify.OAuth2Token `json:"token"`
+	LastCheck string              `json:"last_check"`
 }
 
-type dB struct {
+type DB struct {
 	users    []User
 	saveFile string
-	nextUser uint
-	mu sync.Mutex
+	nextUser int
+	mu       sync.Mutex
 }
 
-func NewDB(saveFile string) dB {
-	return dB{saveFile: saveFile, nextUser: 0}
+func NewDB(saveFile string) DB {
+	return DB{saveFile: saveFile, nextUser: 0}
 }
 
-func (db *dB) Load() {
+func (db *DB) Load() {
 	db.mu.Lock()
+	defer db.mu.Unlock()
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
 		fmt.Println(err)
@@ -36,13 +38,20 @@ func (db *dB) Load() {
 	}
 	defer jsonFile.Close()
 
-	byteValue, _ := io.ReadAll(jsonFile)
-	json.Unmarshal(byteValue, &db.users)
-	db.mu.Unlock()
+	byteValue, err := io.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = json.Unmarshal(byteValue, &db.users)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
-func (db *dB) save() {
-	jsonFile, err := os.Open(db.saveFile)
+func (db *DB) save() {
+	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -58,17 +67,20 @@ func (db *dB) save() {
 	jsonFile.Write(byteValue)
 }
 
-func (db *dB) AddUser(user User) {
+func (db *DB) AddUser(user User) {
 	db.mu.Lock()
 	db.users = append(db.users, user)
 	db.save()
 	db.mu.Unlock()
 }
 
-func (db *dB) NextUser() User {
+func (db *DB) NextUser() User {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	user := db.users[db.nextUser]
-	db.nextUser += 1
+	updatedUser := user
+	updatedUser.LastCheck = time.Now().Format("2006-01-02 15:04 -0700 MST")
+	db.users[db.nextUser] = updatedUser
+	db.nextUser = (db.nextUser + 1) % len(db.users)
 	return user
 }

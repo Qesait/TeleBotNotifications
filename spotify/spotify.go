@@ -255,13 +255,14 @@ type album struct {
 	Id         string `json:"id"`
 	Album_type string `json:"album_type"`
 	// Url string `json:"next"`
-	Name         string `json:"name"`
-	Release_date string `json:"release_date"`
+	Name                 string `json:"name"`
+	Release_date         string `json:"release_date"`
+	ReleaseDatePrecision string `json:"release_date_precision"`
 	// Artists      []Artist `json:"artists"`
 }
 
 type getArtistAlbumsResponse struct {
-	Total int `json:"total"`
+	Total  int     `json:"total"`
 	Albums []album `json:"items"`
 }
 
@@ -278,9 +279,22 @@ func decodeAlbulmsResponse(response *http.Response) ([]Album, error) {
 
 	albums := make([]Album, 0, len(responseData.Albums))
 	for i := 0; i < len(responseData.Albums); i++ {
-		t, err := time.Parse("2006-01-02", responseData.Albums[i].Release_date)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing date: %s", err)
+		var t time.Time
+		if responseData.Albums[i].ReleaseDatePrecision == "day" {
+			t, err = time.Parse("2006-01-02", responseData.Albums[i].Release_date)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing date: %s", err)
+			}
+		} else if responseData.Albums[i].ReleaseDatePrecision == "month" {
+			t, err = time.Parse("2006-01", responseData.Albums[i].Release_date)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing date: %s", err)
+			}
+		} else if responseData.Albums[i].ReleaseDatePrecision == "year" {
+			t, err = time.Parse("2006", responseData.Albums[i].Release_date)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing date: %s", err)
+			}
 		}
 		album := Album{
 			Id:           responseData.Albums[i].Id,
@@ -296,9 +310,9 @@ func decodeAlbulmsResponse(response *http.Response) ([]Album, error) {
 }
 
 func (c *Client) getArtistAlbums(token *OAuth2Token, artist Artist, include_groups string, limit uint, offset uint) ([]Album, error) {
-	resource := "/v1/artists/albums"
+	resource := "/v1/artists/" + artist.Id + "/albums"
 	params := url.Values{}
-	params.Add("id", artist.Id)
+	// params.Add("id", artist.Id)
 	params.Add("include_groups", include_groups)
 	params.Add("limit", strconv.FormatUint(uint64(limit), 10))
 	params.Add("offset", strconv.FormatUint(uint64(offset), 10))
@@ -332,4 +346,8 @@ func (c *Client) getArtistAlbums(token *OAuth2Token, artist Artist, include_grou
 	defer response.Body.Close()
 
 	return decodeAlbulmsResponse(response)
+}
+
+func (c *Client) Last5Albums(token *OAuth2Token, artist Artist) ([]Album, error) {
+	return c.getArtistAlbums(token, artist, "album,single,appears_on,compilation", 5, 0)
 }

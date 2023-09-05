@@ -142,7 +142,7 @@ func (b *Bot) Run(port uint) {
 	lastUpdate := 0
 
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(5 * time.Second)
 		url := createUpdateUrl(b.token, lastUpdate)
 		messages, err := getNewMessages(url)
 		if err != nil {
@@ -150,7 +150,7 @@ func (b *Bot) Run(port uint) {
 			continue
 		}
 		if len(messages) == 0 {
-			fmt.Println("Nothing new")
+			// fmt.Println("Nothing new")
 			continue
 		}
 		for i := 0; i < len(messages); i++ {
