@@ -125,7 +125,7 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 		}
 
 		for i, artist:= range artists {
-			lastAlbums, err := spotifyClient.Last5Albums(&user.Token, artist)
+			lastAlbums, err := spotifyClient.GetArtistAlbums(&user.Token, &artist)
 			if err != nil {
 				bot.SendMessage(fmt.Sprintf("error getting albums: %s", err), user.ChatId)
 				fmt.Println("error getting albums: ", err, artist.Name, artist.Id, i)
@@ -133,11 +133,11 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 			}
 			fmt.Println("Checking", artist.Name, artist.Id)
 			for _, album := range lastAlbums {
-				if LastCheck.Before(album.Release_date) {
+				if LastCheck.Before(album.ReleaseDate) {
 					isSomethingNew = true
 					message := fmt.Sprintf("New release '%s' from %s", album.Name, artist.Name)
 					bot.SendMessage(message, user.ChatId)
-					fmt.Println(message, LastCheck.String(), album.Release_date.String())
+					fmt.Println(message, LastCheck.String(), album.ReleaseDate.String())
 				}
 			}
 			time.Sleep(3 * time.Second)

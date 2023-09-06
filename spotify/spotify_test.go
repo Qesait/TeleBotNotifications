@@ -463,8 +463,8 @@ func Test_getFollowedArtists(t *testing.T) {
 				`,
 				expected_request: "/v1/me/following",
 				expected_artists: []Artist{
-					{"href-1", "1", "artist-1"},
-					{"href-2", "2", "artist-2"},
+					{"1", "artist-1"},
+					{"2", "artist-2"},
 				},
 			},
 			wantErr: false,
@@ -501,14 +501,13 @@ func Test_getFollowedArtists(t *testing.T) {
 	}
 }
 
-
 func Test_getArtistAlbums(t *testing.T) {
 	type args struct {
 		current_token    OAuth2Token
 		statusCode       int
 		response         string
 		expected_request string
-		expected_result []Album
+		expected_result  []Album
 	}
 	tests := []struct {
 		name    string
@@ -528,29 +527,26 @@ func Test_getArtistAlbums(t *testing.T) {
 				statusCode: http.StatusOK,
 				response: `
 				{
-					"href": "https://api.spotify.com/v1/me/shows?offset=0&limit=20",
 					"limit": 20,
-					"next": "https://api.spotify.com/v1/me/shows?offset=1&limit=1",
-					"offset": 0,
-					"previous": "https://api.spotify.com/v1/me/shows?offset=1&limit=1",
+					"next": null,
 					"total": 4,
 					"items": [
 					  {
 						"album_type": "album",
 						"total_tracks": 9,
 						"external_urls": {
-						  "spotify": "string"
+						  "spotify": "spotify_url"
 						},
 						"id": "2up3OPMp9Tb4dAKM2er111",
 						"images": [
 						  {
-							"url": "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+							"url": "image-url-1",
 							"height": 300,
 							"width": 300
 						  }
 						],
-						"name": "string-2",
-						"release_date": "2001-12-01",
+						"name": "name-1",
+						"release_date": "2001",
 						"release_date_precision": "year",
 						"type": "album",
 						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
@@ -560,8 +556,8 @@ func Test_getArtistAlbums(t *testing.T) {
 							  "spotify": "string"
 							},
 							"href": "string",
-							"id": "string",
-							"name": "string",
+							"id": "1",
+							"name": "name-1",
 							"type": "artist",
 							"uri": "string"
 						  }
@@ -572,19 +568,19 @@ func Test_getArtistAlbums(t *testing.T) {
 						"album_type": "compilation",
 						"total_tracks": 9,
 						"external_urls": {
-						  "spotify": "string"
+						  "spotify": "another_spotify_uri"
 						},
 						"id": "2up3OPMp9Tb4dAKM2erWXQ",
 						"images": [
 						  {
-							"url": "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+							"url": "image-url-2",
 							"height": 300,
 							"width": 300
 						  }
 						],
-						"name": "string",
+						"name": "name-2",
 						"release_date": "1981-12-01",
-						"release_date_precision": "year",
+						"release_date_precision": "day",
 						"type": "album",
 						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
 						"artists": [
@@ -593,8 +589,8 @@ func Test_getArtistAlbums(t *testing.T) {
 							  "spotify": "string"
 							},
 							"href": "string",
-							"id": "string",
-							"name": "string",
+							"id": "2",
+							"name": "name-2",
 							"type": "artist",
 							"uri": "string"
 						  }
@@ -604,10 +600,10 @@ func Test_getArtistAlbums(t *testing.T) {
 					]
 				  }
 				`,
-				expected_request: "/v1/artists/albums",
+				expected_request: "/v1/artists/id/albums",
 				expected_result: []Album{
-					{"2up3OPMp9Tb4dAKM2er111", "album", "string-2", time.Date(2001, 12, 1, 0, 0, 0, 0, time.UTC)},
-					{"2up3OPMp9Tb4dAKM2erWXQ", "compilation", "string", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC)},
+					{"2up3OPMp9Tb4dAKM2er111", "name-1", "album", "compilation", "spotify_url", "image-url-1", time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC), []Artist{{"1", "name-1"}}},
+					{"2up3OPMp9Tb4dAKM2erWXQ", "name-2", "compilation", "compilation", "another_spotify_uri", "image-url-2", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC), []Artist{{"2", "name-2"}}},
 				},
 			},
 			wantErr: false,
@@ -619,7 +615,7 @@ func Test_getArtistAlbums(t *testing.T) {
 
 			client := newClient(t, http.MethodGet, tt.args.statusCode, tt.args.expected_request, tt.args.response)
 
-			albums, err := client.getArtistAlbums(&tt.args.current_token, Artist{"", "id", ""}, "", 2, 0)
+			albums, err := client.getArtistAlbums(&tt.args.current_token, "id", "", 2)
 
 			if err != nil {
 				if !tt.wantErr {
@@ -637,10 +633,32 @@ func Test_getArtistAlbums(t *testing.T) {
 			}
 
 			for i := 0; i < len(tt.args.expected_result); i++ {
-				if tt.args.expected_result[i] != albums[i] {
+				if !compareAlbums(tt.args.expected_result[i], albums[i]) {
 					t.Errorf("Wrond result. \nExpected: \t%+v, \nGot: \t%+v", &tt.args.expected_result, albums)
+					break
 				}
 			}
 		})
 	}
+}
+
+func compareAlbums(a1, a2 Album) bool {
+	if a1.Id != a2.Id ||
+		a1.Name != a2.Name ||
+		a1.AlbumGroup != a2.AlbumGroup ||
+		a1.AlbumType != a2.AlbumType ||
+		a1.Url != a2.Url ||
+		a1.ImageUrl != a2.ImageUrl ||
+		a1.ReleaseDate != a2.ReleaseDate {
+		return false
+	}
+	if len(a1.Artists) != len(a2.Artists) {
+		return false
+	}
+	for i, a := range a1.Artists {
+		if a != a2.Artists[i] {
+			return false
+		}
+	}
+	return true
 }
