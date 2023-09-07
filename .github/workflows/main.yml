@@ -82,6 +82,7 @@ jobs:
 
             # Run a new container from a new image
             docker run -d \
+            -v spotify_notifications_bot:/var/lib/spotify_notifications_bot \
             -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
             -e SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }} \
             -e SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }} \

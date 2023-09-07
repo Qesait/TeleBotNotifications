@@ -463,8 +463,8 @@ func Test_getFollowedArtists(t *testing.T) {
 				`,
 				expected_request: "/v1/me/following",
 				expected_artists: []Artist{
-					{"href-1", "1", "artist-1"},
-					{"href-2", "2", "artist-2"},
+					{"1", "artist-1"},
+					{"2", "artist-2"},
 				},
 			},
 			wantErr: false,
@@ -499,4 +499,166 @@ func Test_getFollowedArtists(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getArtistAlbums(t *testing.T) {
+	type args struct {
+		current_token    OAuth2Token
+		statusCode       int
+		response         string
+		expected_request string
+		expected_result  []Album
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			args: args{
+				current_token: OAuth2Token{
+					AccessToken:  "sample-access-token",
+					TokenType:    "bearer",
+					Scope:        "read write",
+					Expires:      time.Now().Add(time.Hour),
+					RefreshToken: "sample-refresh-token",
+				},
+				statusCode: http.StatusOK,
+				response: `
+				{
+					"limit": 20,
+					"next": null,
+					"total": 4,
+					"items": [
+					  {
+						"album_type": "album",
+						"total_tracks": 9,
+						"external_urls": {
+						  "spotify": "spotify_url"
+						},
+						"id": "2up3OPMp9Tb4dAKM2er111",
+						"images": [
+						  {
+							"url": "image-url-1",
+							"height": 300,
+							"width": 300
+						  }
+						],
+						"name": "name-1",
+						"release_date": "2001",
+						"release_date_precision": "year",
+						"type": "album",
+						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"artists": [
+						  {
+							"external_urls": {
+							  "spotify": "string"
+							},
+							"href": "string",
+							"id": "1",
+							"name": "name-1",
+							"type": "artist",
+							"uri": "string"
+						  }
+						],
+						"album_group": "compilation"
+					  },
+					  {
+						"album_type": "compilation",
+						"total_tracks": 9,
+						"external_urls": {
+						  "spotify": "another_spotify_uri"
+						},
+						"id": "2up3OPMp9Tb4dAKM2erWXQ",
+						"images": [
+						  {
+							"url": "image-url-2",
+							"height": 300,
+							"width": 300
+						  }
+						],
+						"name": "name-2",
+						"release_date": "1981-12-01",
+						"release_date_precision": "day",
+						"type": "album",
+						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"artists": [
+						  {
+							"external_urls": {
+							  "spotify": "string"
+							},
+							"href": "string",
+							"id": "2",
+							"name": "name-2",
+							"type": "artist",
+							"uri": "string"
+						  }
+						],
+						"album_group": "compilation"
+					  }
+					]
+				  }
+				`,
+				expected_request: "/v1/artists/id/albums",
+				expected_result: []Album{
+					{"2up3OPMp9Tb4dAKM2er111", "name-1", "album", "compilation", "spotify_url", "image-url-1", time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC), []Artist{{"1", "name-1"}}},
+					{"2up3OPMp9Tb4dAKM2erWXQ", "name-2", "compilation", "compilation", "another_spotify_uri", "image-url-2", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC), []Artist{{"2", "name-2"}}},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			client := newClient(t, http.MethodGet, tt.args.statusCode, tt.args.expected_request, tt.args.response)
+
+			albums, err := client.getArtistAlbums(&tt.args.current_token, "id", "", 2)
+
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("Error decoding response: %v", err)
+				}
+				return
+			} else if tt.wantErr {
+				t.Error("Error expected")
+				return
+			}
+
+			if len(albums) != len(tt.args.expected_result) {
+				t.Errorf("Wrond result. \nExpected: \t%+v, \nGot: \t%+v", &tt.args.expected_result, albums)
+				return
+			}
+
+			for i := 0; i < len(tt.args.expected_result); i++ {
+				if !compareAlbums(tt.args.expected_result[i], albums[i]) {
+					t.Errorf("Wrond result. \nExpected: \t%+v, \nGot: \t%+v", &tt.args.expected_result, albums)
+					break
+				}
+			}
+		})
+	}
+}
+
+func compareAlbums(a1, a2 Album) bool {
+	if a1.Id != a2.Id ||
+		a1.Name != a2.Name ||
+		a1.AlbumGroup != a2.AlbumGroup ||
+		a1.AlbumType != a2.AlbumType ||
+		a1.Url != a2.Url ||
+		a1.ImageUrl != a2.ImageUrl ||
+		a1.ReleaseDate != a2.ReleaseDate {
+		return false
+	}
+	if len(a1.Artists) != len(a2.Artists) {
+		return false
+	}
+	for i, a := range a1.Artists {
+		if a != a2.Artists[i] {
+			return false
+		}
+	}
+	return true
 }
