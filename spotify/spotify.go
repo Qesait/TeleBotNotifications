@@ -315,9 +315,12 @@ func decodeAlbulmsResponse(response *http.Response) ([]Album, *string, error) {
 			AlbumType:   responseData.Albums[i].AlbumType,
 			AlbumGroup:  responseData.Albums[i].AlbumGroup,
 			Url:         responseData.Albums[i].ExternalUrls.Spotify,
-			ImageUrl:    responseData.Albums[i].Images[0].Url,
+			// ImageUrl:    responseData.Albums[i].Images[0].Url,
 			ReleaseDate: t,
 			Artists:     responseData.Albums[i].Artists,
+		}
+		if len(responseData.Albums[i].Images) > 0 {
+			album.ImageUrl = responseData.Albums[i].Images[0].Url
 		}
 		albums = append(albums, album)
 	}
@@ -350,7 +353,6 @@ func (c *Client) getArtistAlbums(token *OAuth2Token, artistId string, include_gr
 	}
 
 	for requestUrl != nil {
-		fmt.Println(*requestUrl)
 		if token.Expired() {
 			refreshed_token, err := c.refreshAccessToken(token)
 			if err != nil {
@@ -381,6 +383,7 @@ func (c *Client) getArtistAlbums(token *OAuth2Token, artistId string, include_gr
 	return albums, nil
 }
 
+//album,single,compilation,appears_on
 func (c *Client) GetArtistAlbums(token *OAuth2Token, artist *Artist) ([]Album, error) {
-	return c.getArtistAlbums(token, artist.Id, "album,single,appears_on,compilation", 20)
+	return c.getArtistAlbums(token, artist.Id, "album,single", 50)
 }

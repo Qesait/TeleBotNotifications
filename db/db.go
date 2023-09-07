@@ -74,13 +74,16 @@ func (db *DB) AddUser(user User) {
 	db.mu.Unlock()
 }
 
-func (db *DB) NextUser() User {
+func (db *DB) NextUser() *User {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if len(db.users) == 0 {
+		return nil
+	}
 	user := db.users[db.nextUser]
 	updatedUser := user
 	updatedUser.LastCheck = time.Now().Format("2006-01-02 15:04 -0700 MST")
 	db.users[db.nextUser] = updatedUser
 	db.nextUser = (db.nextUser + 1) % len(db.users)
-	return user
+	return &user
 }

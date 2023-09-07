@@ -1,9 +1,6 @@
 package main
 
 import (
-	// "errors"
-	// "fmt"
-	// "net/http"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,26 +11,6 @@ import (
 	"time"
 )
 
-// func server(port uint, c chan string) {
-// 	mux := http.NewServeMux()
-// 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// 		// fmt.Println(r)
-// 		fmt.Println(r.URL.Query().Get("idk"))
-// 		c <- r.URL.Query().Get("code")
-// 	})
-// 	server := http.Server{
-// 		Addr:    fmt.Sprintf(":%d", port),
-// 		Handler: mux,
-// 	}
-// 	if err := server.ListenAndServe(); err != nil {
-// 		if !errors.Is(err, http.ErrServerClosed) {
-// 			fmt.Printf("error running http server: %s\n", err)
-// 		}
-// 	}
-// }
-// const serverPort = 8888
-// var c = make(chan string, 1)
-// var authorization_code = ""
 
 
 func Greet(spotify_client *spotify.Client) func (telegram.Message) {
@@ -71,12 +48,6 @@ func GetCodeFromUrl(dB *db.DB, spotify_client *spotify.Client) func(telegram.Mes
 			fmt.Println("error requesting token: ", err)
 			return
 		}
-		// artists, err := spotify_client.GetFollowedArtists(token)
-		// if err != nil {
-		// 	message.Bot.SendMessage(fmt.Sprintf("error getting artists: %s", err), message.User.ChatId)
-		// 	fmt.Println("error getting artists: ", err)
-		// 	return
-		// }
 
 		user := db.User{
 			UserId: message.User.UserId,
@@ -97,19 +68,14 @@ func GetCodeFromUrl(dB *db.DB, spotify_client *spotify.Client) func(telegram.Mes
 	return getCodeFromUrl
 }
 
-// func GetInfo(dB *db.DB) func (telegram.Message) {
-// 	getInfo := func(message telegram.Message) {
-// 		message.Bot.SendMessage(fmt.Sprintf("%d", len(dB.NextUser().Artist)), message.User.ChatId)
-// 		fmt.Println(dB.NextUser())
-// 	}
-// 	return getInfo
-// }
-
 func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bot) {
+	time.Sleep(15 * time.Second)
 	for {
-		time.Sleep(1 * time.Minute)
-
 		user := dB.NextUser()
+		if user == nil {
+			time.Sleep(time.Minute)
+			continue
+		}
 		bot.SendMessage("Checking for new releases", user.ChatId)
 		isSomethingNew := false
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
@@ -131,32 +97,37 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 				fmt.Println("error getting albums: ", err, artist.Name, artist.Id, i)
 				break
 			}
-			fmt.Println("Checking", artist.Name, artist.Id)
+			fmt.Printf("Checking %d albums from %s (%s)\n", len(lastAlbums), artist.Name, artist.Id)
 			for _, album := range lastAlbums {
 				if LastCheck.Before(album.ReleaseDate) {
 					isSomethingNew = true
-					message := fmt.Sprintf("New release '%s' from %s", album.Name, artist.Name)
+					// message := fmt.Sprintf("New release '%s' from %s\n%s", album.Name, artist.Name, album.Url)
+					message := album.Url
 					bot.SendMessage(message, user.ChatId)
 					fmt.Println(message, LastCheck.String(), album.ReleaseDate.String())
 				}
 			}
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 		if !isSomethingNew {
 			bot.SendMessage("Did not found new releases", user.ChatId)
 			fmt.Println("Did not found new releases")
+		} else {
+			bot.SendMessage("All done for now", user.ChatId)
+			fmt.Println("All done for now")
 		}
+		time.Sleep(6 * time.Hour)
 	}
 }
 
 func main() {
-	// dB := db.NewDB("/var/lib/spotify_notifications_bot/save.json")
-	dB := db.NewDB("C:\\Users\\Toolen\\go\\src\\TeleBotNotifications\\save.json")
+	dB := db.NewDB("/var/lib/spotify_notifications_bot/save.json")
+	// dB := db.NewDB("C:\\Users\\Toolen\\go\\src\\TeleBotNotifications\\save.json")
 	dB.Load()
 	fmt.Println("db loaded")
 
-	var client_id = os.Getenv("spotify_client_id")
-	var client_secret = os.Getenv("spotify_client_secret")
+	var client_id = os.Getenv("SPOTIFY_CLIENT_ID")
+	var client_secret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 	var scope = "user-follow-read"
 	var redirect_uri = "http://localhost:8888"
 	
@@ -173,34 +144,8 @@ func main() {
 	bot := telegram.NewBot(bot_token)
 	bot.AddCommand("auth", GetCodeFromUrl(&dB, spotify_client))
 	bot.AddCommand("start", Greet(spotify_client))
-	// bot.AddCommand("info", GetInfo(&dB))
 
 	go CheckNewReleases(&dB, spotify_client, &bot)
 
 	bot.Run(8888)
-
-
-
-	// if authorization_code == "" {
-	// 	go server(serverPort, c)
-	// 	time.Sleep(100 * time.Millisecond)
-
-	// 	var auth_url, _ = spotify_client.GenerateAuthUrl()
-	// 	fmt.Println(*auth_url)
-
-	// 	authorization_code = <-c // not access token
-	// 	fmt.Println(authorization_code)
-	// }
-
-	// token, _ := spotify_client.RequestAccessToken(&authorization_code)
-	// fmt.Println(*token)
-	// artists, err := spotify_client.GetFollowedArtists(token)
-	// fmt.Println("")
-	// fmt.Println(err)
-	// if err == nil {
-	// 	fmt.Println(len(artists))
-	// 	for i:=0; i<len(artists); i++ {
-	// 		fmt.Println(artists[i])
-	// 	}
-	// }
 }
