@@ -5,8 +5,8 @@ import (
 	"net/url"
 
 	"TeleBotNotifications/internal/db"
-	"TeleBotNotifications/pkg/spotify"
-	"TeleBotNotifications/pkg/telegram"
+	"TeleBotNotifications/internal/spotify"
+	"TeleBotNotifications/internal/telegram"
 	"time"
 )
 

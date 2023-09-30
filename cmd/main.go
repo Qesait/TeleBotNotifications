@@ -6,6 +6,10 @@ import (
 
 
 func main() {
-	server, _ := app.New()
+	server, err := app.New()
+	if err != nil {
+		panic(err)
+	}
+
 	server.Run()
 }
