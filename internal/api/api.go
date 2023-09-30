@@ -1,13 +1,12 @@
-package main
+package api
 
 import (
 	"fmt"
 	"net/url"
-	"os"
 
-	"TeleBotNotifications/db"
-	"TeleBotNotifications/spotify"
-	"TeleBotNotifications/telegram"
+	"TeleBotNotifications/internal/db"
+	"TeleBotNotifications/pkg/spotify"
+	"TeleBotNotifications/pkg/telegram"
 	"time"
 )
 
@@ -118,34 +117,4 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 		}
 		time.Sleep(6 * time.Hour)
 	}
-}
-
-func main() {
-	dB := db.NewDB("/var/lib/spotify_notifications_bot/save.json")
-	// dB := db.NewDB("C:\\Users\\Toolen\\go\\src\\TeleBotNotifications\\save.json")
-	dB.Load()
-	fmt.Println("db loaded")
-
-	var client_id = os.Getenv("SPOTIFY_CLIENT_ID")
-	var client_secret = os.Getenv("SPOTIFY_CLIENT_SECRET")
-	var scope = "user-follow-read"
-	var redirect_uri = "http://localhost:8888"
-	
-	if client_id == "" || client_secret == "" {
-		panic("no client credentials")
-	}
-
-	spotify_client, _ := spotify.NewClient(client_id, client_secret, redirect_uri, scope)
-	
-	bot_token := os.Getenv("TELEGRAM_BOT_TOKEN")
-	if bot_token == "" {
-		panic("no bot credentials")
-	}
-	bot := telegram.NewBot(bot_token)
-	bot.AddCommand("auth", GetCodeFromUrl(&dB, spotify_client))
-	bot.AddCommand("start", Greet(spotify_client))
-
-	go CheckNewReleases(&dB, spotify_client, &bot)
-
-	bot.Run(8888)
 }
