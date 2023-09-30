@@ -1,7 +1,7 @@
 package db
 
 import (
-	"TeleBotNotifications/spotify"
+	"TeleBotNotifications/pkg/spotify"
 	"encoding/json"
 	"fmt"
 	"io"
