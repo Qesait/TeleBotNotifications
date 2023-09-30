@@ -7,35 +7,32 @@ import (
 
 	"TeleBotNotifications/internal/db"
 	"TeleBotNotifications/internal/api"
-	"TeleBotNotifications/pkg/spotify"
-	"TeleBotNotifications/pkg/telegram"
+	"TeleBotNotifications/internal/config"
+	"TeleBotNotifications/internal/spotify"
+	"TeleBotNotifications/internal/telegram"
 )
 
 type Server struct {
 	bot telegram.Bot
 	spotify_client *spotify.Client
 	db db.DB
-	// config
+	config *config.Config
 }
 
 func New() (*Server, error) {
 	var err error
-
 	server := &Server{}
+
+	server.config, err = config.NewConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	server.db = db.NewDB("/var/lib/spotify_notifications_bot/save.json")
 	server.db.Load()
 	log.Println("db loaded")
 
-	var client_id = os.Getenv("SPOTIFY_CLIENT_ID")
-	var client_secret = os.Getenv("SPOTIFY_CLIENT_SECRET")
-	var scope = "user-follow-read"
-	var redirect_uri = "http://localhost:8888"
-	
-	if client_id == "" || client_secret == "" {
-		return nil, fmt.Errorf("no client credentials")
-	}
-
-	server.spotify_client, err = spotify.NewClient(client_id, client_secret, redirect_uri, scope)
+	server.spotify_client, err = spotify.NewClient(server.config.Spotify)
 	if err != nil {
 		return nil, err
 	}
@@ -55,5 +52,5 @@ func (s *Server) Run() {
 	
 	go api.CheckNewReleases(&s.db, s.spotify_client, &s.bot)
 	
-	s.bot.Run(8888)
+	s.bot.Run(s.config.Port)
 }

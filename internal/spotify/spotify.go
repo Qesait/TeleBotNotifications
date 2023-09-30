@@ -3,7 +3,6 @@ package spotify
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"time"
 	// "io"
+
+	"TeleBotNotifications/internal/config"
 )
 
 const authUrl = "https://accounts.spotify.com"
@@ -43,17 +44,13 @@ type Client struct {
 	scope         string
 }
 
-func NewClient(client_id string, client_secret string, redirect_uri string, scope string) (*Client, error) {
-	if client_id == "" || client_secret == "" || redirect_uri == "" {
-		return nil, errors.New("some of required parameters are empty")
-	}
-
+func NewClient(config config.SpotifyConfig) (*Client, error) {
 	return &Client{
 		client:        &http.Client{},
-		clientId:      client_id,
-		authorization: base64.StdEncoding.EncodeToString([]byte(client_id + ":" + client_secret)),
-		redirectUri:   redirect_uri,
-		scope:         scope,
+		clientId:      config.ClientId,
+		authorization: base64.StdEncoding.EncodeToString([]byte(config.ClientId + ":" + config.ClientSecret)),
+		redirectUri:   config.RedirectUri,
+		scope:         config.Scope,
 	}, nil
 }
 

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"TeleBotNotifications/internal/config"
 )
 
 type roundTripFunc func(r *http.Request) (*http.Response, error)
@@ -88,7 +90,7 @@ func Test_GenerateAuthUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.args.client_id, "secret", tt.args.redirect_uri, tt.args.scope)
+			client, err := NewClient(config.SpotifyConfig{tt.args.client_id, "secret", tt.args.scope, tt.args.redirect_uri})
 			if err != nil {
 				if !tt.wantErr {
 					t.Error(err)
