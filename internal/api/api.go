@@ -20,7 +20,8 @@ func Greet(spotify_client *spotify.Client) func (telegram.Message) {
 			fmt.Println("error generating auth url: ", err)
 			return
 		}
-		message.Bot.SendMessage(*authUrl, message.User.ChatId)
+		text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
+		message.Bot.SendMessage(text, message.User.ChatId)
 	}
 	return greet
 }
@@ -75,8 +76,8 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 			time.Sleep(time.Minute)
 			continue
 		}
-		bot.SendMessage("Checking for new releases", user.ChatId)
-		isSomethingNew := false
+		// bot.SendMessage("Checking for new releases", user.ChatId)
+		// isSomethingNew := false
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
 			fmt.Println("error parsing time ", err)
@@ -99,7 +100,7 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 			fmt.Printf("Checking %d albums from %s (%s)\n", len(lastAlbums), artist.Name, artist.Id)
 			for _, album := range lastAlbums {
 				if LastCheck.Before(album.ReleaseDate) {
-					isSomethingNew = true
+					// isSomethingNew = true
 					// message := fmt.Sprintf("New release '%s' from %s\n%s", album.Name, artist.Name, album.Url)
 					message := album.Url
 					bot.SendMessage(message, user.ChatId)
@@ -108,13 +109,13 @@ func CheckNewReleases(dB *db.DB, spotifyClient *spotify.Client, bot *telegram.Bo
 			}
 			time.Sleep(2 * time.Second)
 		}
-		if !isSomethingNew {
-			bot.SendMessage("Did not found new releases", user.ChatId)
-			fmt.Println("Did not found new releases")
-		} else {
-			bot.SendMessage("All done for now", user.ChatId)
-			fmt.Println("All done for now")
-		}
-		time.Sleep(6 * time.Hour)
+		// if !isSomethingNew {
+		// 	bot.SendMessage("Did not found new releases", user.ChatId)
+		// 	fmt.Println("Did not found new releases")
+		// } else {
+		// 	bot.SendMessage("All done for now", user.ChatId)
+		// 	fmt.Println("All done for now")
+		// }
+		time.Sleep(24 * time.Hour)
 	}
 }
