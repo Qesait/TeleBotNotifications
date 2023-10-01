@@ -45,6 +45,10 @@ type Client struct {
 }
 
 func NewClient(config config.SpotifyConfig) (*Client, error) {
+	if config.ClientId == "" || config.ClientSecret == "" {
+		return nil, fmt.Errorf("credentials required")
+	}
+
 	return &Client{
 		client:        &http.Client{},
 		clientId:      config.ClientId,
