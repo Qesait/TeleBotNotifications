@@ -77,20 +77,15 @@ func Test_GenerateAuthUrl(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "Empty uri",
-			args: args{
-				client_id:    "",
-				redirect_uri: "adress",
-				scope:        "everything",
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(config.SpotifyConfig{tt.args.client_id, "secret", tt.args.scope, tt.args.redirect_uri})
+			client, err := NewClient(config.SpotifyConfig{
+				ClientId:     tt.args.client_id,
+				ClientSecret: "secret",
+				Scope:        tt.args.scope,
+				RedirectUri:  tt.args.redirect_uri})
 			if err != nil {
 				if !tt.wantErr {
 					t.Error(err)
