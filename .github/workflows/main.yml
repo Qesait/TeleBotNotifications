@@ -1,4 +1,4 @@
-name: CI
+name: Tests_and_Deploy
 
 on:
   push:
@@ -86,6 +86,7 @@ jobs:
             -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
             -e SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }} \
             -e SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }} \
+            -e TELEGRAM_ADMIN_CHAT_ID=${{ secrets.TELEGRAM_ADMIN_CHAT_ID }} \
             --restart always \
             --publish 8888:8888 \
             --name $(echo $CONTAINER_NAME) \

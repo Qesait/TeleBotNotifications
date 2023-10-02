@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -17,28 +17,35 @@ type SpotifyConfig struct {
 }
 
 type TelegramConfig struct {
-	BotToken string
+	BotToken    string
+	AdminChatId int
+	UpdateDelay uint `json:"update_delay"`
 }
 
 type Config struct {
 	configName string
-	Port       uint          `json:"port"`
-	Spotify    SpotifyConfig `json:"spotify"`
-	Telegram   TelegramConfig
+	Port       uint           `json:"port"`
+	Spotify    SpotifyConfig  `json:"spotify"`
+	Telegram   TelegramConfig `json:"telegram"`
 }
 
 func (c *Config) readEnv() error {
+	c.Telegram.BotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
+	if c.Telegram.BotToken == "" {
+		return fmt.Errorf("failed to load config: telegram bot token not specified")
+	}
+	var err error
+	c.Telegram.AdminChatId, err = strconv.Atoi(os.Getenv("TELEGRAM_ADMIN_CHAT_ID"))
+	if err != nil {
+		c.Telegram.AdminChatId = -1
+	}
 	c.Spotify.ClientId = os.Getenv("SPOTIFY_CLIENT_ID")
 	if c.Spotify.ClientId == "" {
-		return fmt.Errorf("spotify id not specified")
+		return fmt.Errorf("failed to load config: spotify id not specified")
 	}
 	c.Spotify.ClientSecret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 	if c.Spotify.ClientSecret == "" {
-		return fmt.Errorf("spotify secret not specified")
-	}
-	c.Telegram.BotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
-	if c.Telegram.BotToken == "" {
-		return fmt.Errorf("telegram bot token not specified")
+		return fmt.Errorf("failed to load config: spotify secret not specified")
 	}
 
 	c.configName = "config"
@@ -54,7 +61,6 @@ func (c *Config) readEnv() error {
 }
 
 func (c *Config) readJson() error {
-	log.Println(c.configName)
 	jsonFile, err := os.Open(c.configName)
 	if err != nil {
 		return err
@@ -86,7 +92,5 @@ func NewConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("config parsed")
 	return config, nil
 }

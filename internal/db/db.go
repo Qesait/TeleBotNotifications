@@ -2,8 +2,8 @@ package db
 
 import (
 	"TeleBotNotifications/internal/spotify"
+	"TeleBotNotifications/internal/logger"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -33,38 +33,38 @@ func (db *DB) Load() {
 	defer db.mu.Unlock()
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("db load error: ", err)
 		return
 	}
 	defer jsonFile.Close()
-
+	
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		fmt.Println(err)
-		return
+		logger.Error("db load error: ", err)
 	}
 	err = json.Unmarshal(byteValue, &db.users)
 	if err != nil {
-		fmt.Println(err)
-		return
+		logger.Error("db load error: ", err)
 	}
+	logger.Println("db loaded")
 }
 
 func (db *DB) save() {
 	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("db save error: ", err)
 		return
 	}
 	defer jsonFile.Close()
-
+	
 	byteValue, err := json.Marshal(db.users)
-
+	
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("db save error: ", err)
 		return
 	}
 	jsonFile.Write(byteValue)
+	logger.Println("db saved")
 }
 
 func (db *DB) AddUser(user User) {
@@ -80,10 +80,12 @@ func (db *DB) NextUser() *User {
 	if len(db.users) == 0 {
 		return nil
 	}
+
 	user := db.users[db.nextUser]
 	updatedUser := user
 	updatedUser.LastCheck = time.Now().Format("2006-01-02 15:04 -0700 MST")
 	db.users[db.nextUser] = updatedUser
+	defer db.save()
 	db.nextUser = (db.nextUser + 1) % len(db.users)
 	return &user
 }
