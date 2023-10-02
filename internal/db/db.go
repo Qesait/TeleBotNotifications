@@ -53,18 +53,20 @@ func (db *DB) Load() {
 func (db *DB) save() {
 	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("db can't create file:", err)
 		return
 	}
+	fmt.Println("file for save created")
 	defer jsonFile.Close()
-
+	
 	byteValue, err := json.Marshal(db.users)
-
+	
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	jsonFile.Write(byteValue)
+	fmt.Println("db saved")
 }
 
 func (db *DB) AddUser(user User) {

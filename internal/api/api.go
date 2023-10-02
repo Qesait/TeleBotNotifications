@@ -56,8 +56,6 @@ func GetCodeFromUrl(dB *db.DB, spotify_client *spotify.Client) func(telegram.Mes
 			LastCheck: (time.Now().Add(-120 * time.Hour)).Format("2006-01-02 15:04 -0700 MST"),
 		}
 
-		fmt.Println("got user:", user)
-
 		dB.AddUser(user)
 
 		message.Bot.SendMessage("Looks like it worked", message.User.ChatId)

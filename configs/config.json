@@ -1,5 +1,7 @@
 {
     "port": 8888,
-    "scope": "user-follow-read",
-    "redirect_uri": "http://localhost:8888"
+    "spotify" : {
+        "scope": "user-follow-read",
+        "redirect_uri": "http://localhost:8888"
+    }
 }

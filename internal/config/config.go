@@ -28,17 +28,17 @@ type Config struct {
 }
 
 func (c *Config) readEnv() error {
+	c.Telegram.BotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
+	if c.Telegram.BotToken == "" {
+		return fmt.Errorf("failed to load config: telegram bot token not specified")
+	}
 	c.Spotify.ClientId = os.Getenv("SPOTIFY_CLIENT_ID")
 	if c.Spotify.ClientId == "" {
-		return fmt.Errorf("spotify id not specified")
+		return fmt.Errorf("failed to load config: spotify id not specified")
 	}
 	c.Spotify.ClientSecret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 	if c.Spotify.ClientSecret == "" {
-		return fmt.Errorf("spotify secret not specified")
-	}
-	c.Telegram.BotToken = os.Getenv("TELEGRAM_BOT_TOKEN")
-	if c.Telegram.BotToken == "" {
-		return fmt.Errorf("telegram bot token not specified")
+		return fmt.Errorf("failed to load config: spotify secret not specified")
 	}
 
 	c.configName = "config"
