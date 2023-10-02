@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type SpotifyConfig struct {
@@ -17,15 +17,15 @@ type SpotifyConfig struct {
 }
 
 type TelegramConfig struct {
-	BotToken string
+	BotToken    string
 	AdminChatId int
 	UpdateDelay uint `json:"update_delay"`
 }
 
 type Config struct {
 	configName string
-	Port       uint          `json:"port"`
-	Spotify    SpotifyConfig `json:"spotify"`
+	Port       uint           `json:"port"`
+	Spotify    SpotifyConfig  `json:"spotify"`
 	Telegram   TelegramConfig `json:"telegram"`
 }
 

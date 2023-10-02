@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -28,13 +27,27 @@ func init() {
 	generalLogger = log.New(os.Stdout, "General:\t", log.Ldate|log.Ltime)
 	errorLogger = log.New(os.Stderr, "Error:\t", log.Ldate|log.Ltime|log.Llongfile)
 
-	absPath, err := filepath.Abs("./logs")
-	if err != nil {
-		errorLogger.Printf("Error reading given path: %s\n", err.Error())
-	}
+	logsPath := "/var/lib/spotify_notifications_bot/logs"
+
+    _, err := os.Stat(logsPath)
+    if os.IsNotExist(err) {
+        err := os.MkdirAll(logsPath, 0766)
+        if err != nil {
+            errorLogger.Printf("Error creating a folder: %s\n", err.Error())
+			return
+        }
+		err = os.Chmod(logsPath, 0766)
+		if err != nil {
+			errorLogger.Printf("Error giving folder permissions: %s\n", err.Error())
+			return
+		}
+	} else if err != nil {
+		errorLogger.Printf("Error accessing a folder: %s\n", err.Error())
+		return
+    }
 
 	currentTime := time.Now()
-	logFileName := fmt.Sprintf("%s/%s.log", absPath, currentTime.Format("2006-01-02_15-04-05"))
+	logFileName := fmt.Sprintf("%s/%s.log", logsPath, currentTime.Format("2006-01-02_15-04-05"))
 	generalLog, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		errorLogger.Printf("Error opening file: %s\n", err.Error())

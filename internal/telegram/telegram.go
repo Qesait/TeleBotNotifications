@@ -148,7 +148,7 @@ type Message struct {
 func (b *Bot) Run(port uint) {
 	lastUpdate := 0
 	logger.Println("Telegram bot started")
-
+	
 	for {
 		time.Sleep(b.updateDelay)
 		url := createUpdateUrl(b.token, lastUpdate)

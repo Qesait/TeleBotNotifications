@@ -50,8 +50,6 @@ func New() (*Server, error) {
 }
 
 func (s *Server) Run() {
-	logger.Println(fmt.Sprintf("%#v", s.config))
-
 	s.db.Load()
 
 	s.bot.AddCommand("auth", api.GetCodeFromUrl(&s.db, s.spotify_client))
@@ -88,7 +86,7 @@ func (s *Server) CheckNewReleases () {
 			}
 			for _, album := range lastAlbums {
 				if LastCheck.Before(album.ReleaseDate) {
-					logger.Println(fmt.Sprintf("New release '%s' from %s\n%s", album.Name, artist.Name, album.Url))
+					logger.Println(fmt.Sprintf("New release '%s' from %s", album.Name, artist.Name))
 					message := album.Url
 					s.bot.SendMessage(message, user.ChatId)
 				}
