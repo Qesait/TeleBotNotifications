@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"TeleBotNotifications/internal/config"
+	"TeleBotNotifications/internal/logger"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,10 +23,15 @@ type Bot struct {
 	token       string
 	commands    []command
 	http_client *http.Client
+	updateDelay time.Duration
 }
 
-func NewBot(token string) Bot {
-	return Bot{token: token, http_client: &http.Client{}}
+func NewBot(config config.TelegramConfig) Bot {
+	return Bot{
+		token: config.BotToken, 
+		http_client: &http.Client{}, 
+		updateDelay: time.Duration(config.UpdateDelay) * time.Second,
+	}
 }
 
 func (b *Bot) AddCommand(keyword string, handler CommandHandler) {
@@ -140,21 +147,20 @@ type Message struct {
 
 func (b *Bot) Run(port uint) {
 	lastUpdate := 0
+	logger.Println("Telegram bot started")
 
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(b.updateDelay)
 		url := createUpdateUrl(b.token, lastUpdate)
 		messages, err := getNewMessages(url)
 		if err != nil {
-			fmt.Println("Error reading response", err)
+			logger.Error("Error reading response: ", err)
 			continue
 		}
 		if len(messages) == 0 {
-			// fmt.Println("Nothing new")
 			continue
 		}
 		for i := 0; i < len(messages); i++ {
-			// fmt.Println(messages[i].Text)
 			if messages[i].UpdateId > lastUpdate {
 				lastUpdate = messages[i].UpdateId
 			}
@@ -162,11 +168,9 @@ func (b *Bot) Run(port uint) {
 				continue
 			}
 			for j := 0; j < len(b.commands); j++ {
-				// fmt.Println(messages[i].Text, b.commands[j].Keyword)
 				if strings.HasPrefix(messages[i].Text, b.commands[j].Keyword) {
+					logger.Println("<-" + messages[i].Text)
 					text := strings.TrimSpace(strings.TrimPrefix(messages[i].Text, b.commands[j].Keyword))
-					fmt.Println("<-", text)
-
 					b.commands[j].Handler(Message{
 						Bot: b,
 						User: struct {

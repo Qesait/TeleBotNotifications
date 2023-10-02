@@ -3,5 +3,8 @@
     "spotify" : {
         "scope": "user-follow-read",
         "redirect_uri": "http://localhost:8888"
+    },
+    "telegram" : {
+        "update_delay": 5
     }
 }

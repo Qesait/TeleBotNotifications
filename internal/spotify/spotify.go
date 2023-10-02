@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	// "io"
 
 	"TeleBotNotifications/internal/config"
 )
@@ -204,7 +203,6 @@ func (c *Client) getFollowedArtists(token *OAuth2Token, request_limit uint) ([]A
 	}
 
 	for requestUrl != nil {
-
 		fmt.Println(*requestUrl)
 
 		if token.Expired() {
