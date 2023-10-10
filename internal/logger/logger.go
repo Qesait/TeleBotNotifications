@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"TeleBotNotifications/internal/config"
 	"fmt"
 	"log"
 	"os"
@@ -15,28 +16,25 @@ var generalLogger *log.Logger
 var generalFileLogger *log.Logger
 var errorLogger *log.Logger
 var errorFileLogger *log.Logger
-var telegramLogger func(string) error
+var telegramLogger func(string) error = nil
 
-var TelegramLogLevel uint = 0
-var FileLogLevel uint = 1
-var StdLogLevel uint = 1
+var conf *config.LoggerConfig = nil
 
-// Заменить много логгров на много *os.File, чтобы логгер правильно показывал файл, в котором возникла ошибка
+// TODO: Заменить много логгров на много *os.File, чтобы логгер правильно показывал файл, в котором возникла ошибка
 
-func init() {
+func Setup(config_ *config.LoggerConfig) {
+	conf = config_
 	generalLogger = log.New(os.Stdout, "General:\t", log.Ldate|log.Ltime)
 	errorLogger = log.New(os.Stderr, "Error:\t", log.Ldate|log.Ltime|log.Llongfile)
 
-	logsPath := "/var/lib/spotify_notifications_bot/logs"
-
-    _, err := os.Stat(logsPath)
+    _, err := os.Stat(conf.Path)
     if os.IsNotExist(err) {
-        err := os.MkdirAll(logsPath, 0766)
+        err := os.MkdirAll(conf.Path, 0766)
         if err != nil {
             errorLogger.Printf("Error creating a folder: %s\n", err.Error())
 			return
         }
-		err = os.Chmod(logsPath, 0766)
+		err = os.Chmod(conf.Path, 0766)
 		if err != nil {
 			errorLogger.Printf("Error giving folder permissions: %s\n", err.Error())
 			return
@@ -47,7 +45,7 @@ func init() {
     }
 
 	currentTime := time.Now()
-	logFileName := fmt.Sprintf("%s/%s.log", logsPath, currentTime.Format("2006-01-02_15-04-05"))
+	logFileName := fmt.Sprintf("%s/%s.log", conf.Path, currentTime.Format("2006-01-02_15-04-05"))
 	generalLog, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		errorLogger.Printf("Error opening file: %s\n", err.Error())
@@ -63,26 +61,32 @@ func SetupTelegramLogger(output func(string) error) {
 
 
 func Println(line string) {
-	if StdLogLevel == FULL {
+	if conf == nil {
+		return
+	}
+	if conf.StdLogLevel == FULL {
 		generalLogger.Println(line)
 	}
-	if FileLogLevel == FULL {
+	if conf.FileLogLevel == FULL {
 		generalFileLogger.Println(line)
 	}
-	if TelegramLogLevel == FULL {
+	if telegramLogger != nil && conf.TelegramLogLevel == FULL {
 		telegramLogger(line)
 	}
 }
 
 func Error(line string, err error) {
-	line = line + err.Error()
-	if StdLogLevel >= ERROR_ONLY {
+	if conf == nil {
+		return
+	}
+	line = line + "\n\t" + err.Error()
+	if conf.StdLogLevel >= ERROR_ONLY {
 		errorLogger.Println(line)
 	}
-	if FileLogLevel >= ERROR_ONLY {
+	if conf.FileLogLevel >= ERROR_ONLY {
 		errorFileLogger.Println(line)
 	}
-	if TelegramLogLevel >= ERROR_ONLY {
+	if telegramLogger != nil && conf.TelegramLogLevel >= ERROR_ONLY {
 		telegramLogger(line)
 	}
 }

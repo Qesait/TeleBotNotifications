@@ -81,7 +81,7 @@ func Test_GenerateAuthUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(config.SpotifyConfig{
+			client, err := NewClient(&config.SpotifyConfig{
 				ClientId:     tt.args.client_id,
 				ClientSecret: "secret",
 				Scope:        tt.args.scope,

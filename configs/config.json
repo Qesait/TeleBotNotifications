@@ -5,6 +5,11 @@
         "redirect_uri": "http://localhost:8888"
     },
     "telegram" : {
-        "update_delay": 5
+        "update_delay": 10
+    },
+    "logger" : {
+        "telegram_log_level" : 1,
+        "file_log_level" : 2,
+        "std_log_level" : 2
     }
 }

@@ -26,7 +26,7 @@ type Bot struct {
 	updateDelay time.Duration
 }
 
-func NewBot(config config.TelegramConfig) Bot {
+func NewBot(config *config.TelegramConfig) Bot {
 	return Bot{
 		token: config.BotToken, 
 		http_client: &http.Client{}, 
@@ -34,6 +34,7 @@ func NewBot(config config.TelegramConfig) Bot {
 	}
 }
 
+// TODO: Add command description to the bot
 func (b *Bot) AddCommand(keyword string, handler CommandHandler) {
 	b.commands = append(b.commands, command{"/" + keyword, handler})
 }
@@ -148,7 +149,7 @@ type Message struct {
 func (b *Bot) Run(port uint) {
 	lastUpdate := 0
 	logger.Println("Telegram bot started")
-	
+
 	for {
 		time.Sleep(b.updateDelay)
 		url := createUpdateUrl(b.token, lastUpdate)
