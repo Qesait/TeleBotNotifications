@@ -43,7 +43,7 @@ type Client struct {
 	scope         string
 }
 
-func NewClient(config config.SpotifyConfig) (*Client, error) {
+func NewClient(config *config.SpotifyConfig) (*Client, error) {
 	if config.ClientId == "" || config.ClientSecret == "" {
 		return nil, fmt.Errorf("credentials required")
 	}
