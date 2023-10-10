@@ -91,3 +91,14 @@ jobs:
             --publish 8888:8888 \
             --name $(echo $CONTAINER_NAME) \
             ghcr.io/${{ env.repository }}:latest
+
+            # Sleep for a few seconds to allow the container to start
+            sleep 10
+
+            # Check if the container is running by name
+            if docker ps -q -f name=$(echo $CONTAINER_NAME) | grep -q .; then
+              echo "Container is running."
+            else
+              echo "Container is not running. Workflow failed."
+              exit 1
+            fi
