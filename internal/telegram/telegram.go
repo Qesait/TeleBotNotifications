@@ -24,13 +24,15 @@ type Bot struct {
 	commands    []command
 	http_client *http.Client
 	updateDelay time.Duration
+	adminChatId int
 }
 
 func NewBot(config *config.TelegramConfig) Bot {
 	return Bot{
-		token: config.BotToken, 
-		http_client: &http.Client{}, 
+		token:       config.BotToken,
+		http_client: &http.Client{},
 		updateDelay: time.Duration(config.UpdateDelay) * time.Second,
+		adminChatId: config.AdminChatId,
 	}
 }
 
@@ -148,14 +150,14 @@ type Message struct {
 
 func (b *Bot) Run(port uint) {
 	lastUpdate := 0
-	logger.Println("Telegram bot started")
+	logger.General.Println("Telegram bot started")
 
 	for {
 		time.Sleep(b.updateDelay)
 		url := createUpdateUrl(b.token, lastUpdate)
 		messages, err := getNewMessages(url)
 		if err != nil {
-			logger.Error("Error reading response: ", err)
+			logger.Error.Println("Error reading response: ", err)
 			continue
 		}
 		if len(messages) == 0 {
@@ -170,7 +172,7 @@ func (b *Bot) Run(port uint) {
 			}
 			for j := 0; j < len(b.commands); j++ {
 				if strings.HasPrefix(messages[i].Text, b.commands[j].Keyword) {
-					logger.Println("<-" + messages[i].Text)
+					logger.General.Println("<-" + messages[i].Text)
 					text := strings.TrimSpace(strings.TrimPrefix(messages[i].Text, b.commands[j].Keyword))
 					b.commands[j].Handler(Message{
 						Bot: b,
@@ -212,4 +214,12 @@ func (b *Bot) SendMessage(message string, to int) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) Write(p []byte) (n int, err error) {
+	err = b.SendMessage(string(p), b.adminChatId)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }

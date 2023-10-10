@@ -1,8 +1,8 @@
 package db
 
 import (
-	"TeleBotNotifications/internal/spotify"
 	"TeleBotNotifications/internal/logger"
+	"TeleBotNotifications/internal/spotify"
 	"encoding/json"
 	"io"
 	"os"
@@ -33,38 +33,38 @@ func (db *DB) Load() {
 	defer db.mu.Unlock()
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
-		logger.Error("db load error: ", err)
+		logger.Error.Println("db load error: ", err)
 		return
 	}
 	defer jsonFile.Close()
-	
+
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		logger.Error("db load error: ", err)
+		logger.Error.Println("db load error: ", err)
 	}
 	err = json.Unmarshal(byteValue, &db.users)
 	if err != nil {
-		logger.Error("db load error: ", err)
+		logger.Error.Println("db load error: ", err)
 	}
-	logger.Println("db loaded")
+	logger.General.Println("db loaded")
 }
 
 func (db *DB) save() {
 	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
-		logger.Error("db save error: ", err)
+		logger.Error.Println("db save error: ", err)
 		return
 	}
 	defer jsonFile.Close()
-	
+
 	byteValue, err := json.Marshal(db.users)
-	
+
 	if err != nil {
-		logger.Error("db save error: ", err)
+		logger.Error.Println("db save error: ", err)
 		return
 	}
 	jsonFile.Write(byteValue)
-	logger.Println("db saved")
+	logger.General.Println("db saved")
 }
 
 func (db *DB) AddUser(user User) {
