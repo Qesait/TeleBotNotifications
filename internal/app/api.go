@@ -13,7 +13,7 @@ import (
 func (s *Server) Greet(message telegram.Message) {
 	authUrl, err := s.spotifyClient.GenerateAuthUrl()
 	if err != nil {
-		logger.Error("error generating auth url: ", err)
+		logger.Error.Println("error generating auth url: ", err)
 		return
 	}
 	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
@@ -23,18 +23,18 @@ func (s *Server) Greet(message telegram.Message) {
 func (s *Server) GetCodeFromUrl(message telegram.Message) {
 	parsedURL, err := url.Parse(message.Text)
 	if err != nil {
-		logger.Error("error parsing URL: ", err)
+		logger.Error.Println("error parsing URL: ", err)
 		return
 	}
 	code := parsedURL.Query().Get("code")
 	if code == "" {
-		logger.Error("couldn't extract code from url: ", fmt.Errorf(message.Text))
+		logger.Error.Println("couldn't extract code from url: ", message.Text)
 		return
 	}
 
 	token, err := s.spotifyClient.RequestAccessToken(&code)
 	if err != nil {
-		logger.Error("error requesting token: ", err)
+		logger.Error.Println("error requesting token: ", err)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (s *Server) GetCodeFromUrl(message telegram.Message) {
 
 	s.db.AddUser(user)
 
-	logger.Println(fmt.Sprintf("New user %d added", user.UserId))
+	logger.General.Printf("New user %d added\n", user.UserId)
 }
 
 func (s *Server) CheckNewReleases () {
@@ -58,26 +58,26 @@ func (s *Server) CheckNewReleases () {
 			time.Sleep(time.Minute)
 			continue
 		}
-		logger.Println(fmt.Sprintf("Checking for new releases for user %d", user.UserId))
+		logger.General.Printf("Checking for new releases for user %d\n", user.UserId)
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
-			logger.Error("error parsing time ", err)
+			logger.Error.Println("error parsing time ", err)
 		}
 
 		artists, err := s.spotifyClient.GetFollowedArtists(&user.Token)
 		if err != nil {
-			logger.Error("error getting artists: ", err)
+			logger.Error.Println("error getting artists: ", err)
 		}
 
 		for _, artist:= range artists {
 			lastAlbums, err := s.spotifyClient.GetArtistAlbums(&user.Token, &artist)
 			if err != nil {
-				logger.Error(fmt.Sprintf("error getting albums for artist %s(%s)", artist.Name, artist.Id), err)
+				logger.Error.Printf("error getting albums for artist %s(%s): %s\n", artist.Name, artist.Id, err)
 				break
 			}
 			for _, album := range lastAlbums {
 				if LastCheck.Before(album.ReleaseDate) {
-					logger.Println(fmt.Sprintf("New release '%s' from %s", album.Name, artist.Name))
+					logger.General.Printf("New release '%s' from %s\n", album.Name, artist.Name)
 					message := album.Url
 					s.bot.SendMessage(message, user.ChatId)
 				}
@@ -85,7 +85,7 @@ func (s *Server) CheckNewReleases () {
 			// TODO: Do somethig with this delay
 			time.Sleep(2 * time.Second)
 		}
-		logger.Println(fmt.Sprintf("Finished checking for new releases for user %d", user.UserId))
+		logger.General.Printf("Finished checking for new releases for user %d", user.UserId)
 		time.Sleep(24 * time.Hour)
 	}
 }
