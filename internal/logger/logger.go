@@ -51,7 +51,7 @@ func Setup(conf *config.LoggerConfig, telegramBot io.Writer) error {
 	errorWriter := io.MultiWriter(errorWriters...)
 
 	General = log.New(generalWriter, "General:\t", log.Ldate|log.Ltime)
-	Error = log.New(errorWriter, "Error:\t", log.Ldate|log.Ltime|log.Llongfile)
+	Error = log.New(errorWriter, "Error:  \t", log.Ldate|log.Ltime|log.Llongfile)
 
 	return nil
 }

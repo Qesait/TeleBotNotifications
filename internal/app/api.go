@@ -17,7 +17,7 @@ func (s *Server) Greet(message telegram.Message) {
 		return
 	}
 	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
-	message.Bot.SendMessage(text, message.User.ChatId)
+	s.bot.SendMessage(text, message.ChatId)
 }
 
 func (s *Server) GetCodeFromUrl(message telegram.Message) {
@@ -39,8 +39,8 @@ func (s *Server) GetCodeFromUrl(message telegram.Message) {
 	}
 
 	user := db.User{
-		UserId:    message.User.UserId,
-		ChatId:    message.User.ChatId,
+		UserId:    message.UserId,
+		ChatId:    message.ChatId,
 		Token:     *token,
 		LastCheck: (time.Now().Add(-120 * time.Hour)).Format("2006-01-02 15:04 -0700 MST"),
 	}
@@ -58,7 +58,7 @@ func (s *Server) CheckNewReleases () {
 			time.Sleep(time.Minute)
 			continue
 		}
-		logger.General.Printf("Checking for new releases for user %d\n", user.UserId)
+		logger.General.Printf("Checking for new releases for user %d. Previous check was: %s\n", user.UserId, user.LastCheck)
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
 			logger.Error.Println("error parsing time ", err)
@@ -77,7 +77,7 @@ func (s *Server) CheckNewReleases () {
 			}
 			for _, album := range lastAlbums {
 				if LastCheck.Before(album.ReleaseDate) {
-					logger.General.Printf("New release '%s' from %s\n", album.Name, artist.Name)
+					logger.General.Printf("New release '%s'\tby %s\tfrom %s\n", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					message := album.Url
 					s.bot.SendMessage(message, user.ChatId)
 				}
