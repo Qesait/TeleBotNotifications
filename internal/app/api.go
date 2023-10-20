@@ -58,16 +58,18 @@ func (s *Server) CheckNewReleases () {
 			time.Sleep(time.Minute)
 			continue
 		}
-		logger.General.Printf("Checking for new releases for user %d. Previous check was: %s\n", user.UserId, user.LastCheck)
+		logger.General.Printf("Checking for new releases for user %d. ", user.UserId)
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
 			logger.Error.Println("error parsing time ", err)
 		}
+		logger.General.Printf("Previous check was: %s\n", LastCheck)
 
 		artists, err := s.spotifyClient.GetFollowedArtists(&user.Token)
 		if err != nil {
 			logger.Error.Println("error getting artists: ", err)
 		}
+		logger.General.Println("Going to check", len(artists), "artists")
 
 		for _, artist:= range artists {
 			lastAlbums, err := s.spotifyClient.GetArtistAlbums(&user.Token, &artist)
