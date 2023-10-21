@@ -81,7 +81,10 @@ func (s *Server) CheckNewReleases () {
 				if LastCheck.Before(album.ReleaseDate) {
 					logger.General.Printf("New release '%s'\tby %s\tfrom %s\n", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					message := album.Url
-					s.bot.SendMessage(message, user.ChatId)
+					err := s.bot.SendMessage(message, user.ChatId)
+					if err != nil {
+						logger.Error.Println("error sending message with new release:", err)
+					}
 				}
 			}
 			// TODO: Do somethig with this delay

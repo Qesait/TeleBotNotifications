@@ -96,13 +96,13 @@ func (b *Bot) SendMessage(message string, to int) error {
 
 	response, err := http.Get(requestUrl)
 	if err != nil {
-		logger.Error.Println("telegram bot failed to send message with error", err)
+		// logger.Error.Println("telegram bot failed to send message with error", err)
 		return fmt.Errorf("sending request failed with err: %s", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		logger.Error.Println("telegram bot failed to send message because of unexpected status code", response)
+		// logger.Error.Println("telegram bot failed to send message because of unexpected status code", response)
 		return fmt.Errorf("unexpected status code: %s", response.Status)
 	}
 
