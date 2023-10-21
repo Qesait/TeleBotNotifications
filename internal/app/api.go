@@ -58,16 +58,18 @@ func (s *Server) CheckNewReleases () {
 			time.Sleep(time.Minute)
 			continue
 		}
-		logger.General.Printf("Checking for new releases for user %d. Previous check was: %s\n", user.UserId, user.LastCheck)
+		logger.General.Printf("Checking for new releases for user %d. ", user.UserId)
 		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
 			logger.Error.Println("error parsing time ", err)
 		}
+		logger.General.Printf("Previous check was: %s\n", LastCheck)
 
 		artists, err := s.spotifyClient.GetFollowedArtists(&user.Token)
 		if err != nil {
 			logger.Error.Println("error getting artists: ", err)
 		}
+		logger.General.Println("Going to check", len(artists), "artists")
 
 		for _, artist:= range artists {
 			lastAlbums, err := s.spotifyClient.GetArtistAlbums(&user.Token, &artist)
@@ -79,7 +81,10 @@ func (s *Server) CheckNewReleases () {
 				if LastCheck.Before(album.ReleaseDate) {
 					logger.General.Printf("New release '%s'\tby %s\tfrom %s\n", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					message := album.Url
-					s.bot.SendMessage(message, user.ChatId)
+					err := s.bot.SendMessage(message, user.ChatId)
+					if err != nil {
+						logger.Error.Println("error sending message with new release:", err)
+					}
 				}
 			}
 			// TODO: Do somethig with this delay

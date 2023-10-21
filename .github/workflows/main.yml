@@ -74,6 +74,9 @@ jobs:
             # Free up space
             docker rm $(echo $CONTAINER_NAME)
 
+            # Delete old image
+            docker rmi ghcr.io/${{ env.repository }}:latest
+
             # Login to Github Container Registry
             docker login https://ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.ACCESS_TOKEN }}
 
