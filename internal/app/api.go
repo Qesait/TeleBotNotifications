@@ -50,20 +50,33 @@ func (s *Server) GetCodeFromUrl(message telegram.Message) {
 	logger.General.Printf("New user %d added\n", user.UserId)
 }
 
+func stripTime(t time.Time) time.Time {
+    year, month, day := t.Date()
+    return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+}
+
 func (s *Server) CheckNewReleases () {
 	for {
-		// TODO: Change update rate
 		user := s.db.NextUser()
 		if user == nil {
 			time.Sleep(time.Minute)
 			continue
 		}
 		logger.General.Printf("Checking for new releases for user %d. ", user.UserId)
-		LastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
+		lastCheck, err := time.Parse("2006-01-02 15:04 -0700 MST", user.LastCheck)
 		if err != nil {
 			logger.Error.Println("error parsing time ", err)
 		}
-		logger.General.Printf("Previous check was: %s\n", LastCheck)
+		logger.General.Printf("Previous check was: %s\n", lastCheck)
+
+		// TODO: somehow aacount for new users
+		currentTime := stripTime(time.Now())
+		lastCheck = stripTime(lastCheck)
+		if lastCheck == currentTime {
+			logger.General.Printf("Already checked new releases for user %d today", user.UserId)
+			time.Sleep(time.Hour)
+			continue
+		}
 
 		artists, err := s.spotifyClient.GetFollowedArtists(&user.Token)
 		if err != nil {
@@ -78,7 +91,7 @@ func (s *Server) CheckNewReleases () {
 				break
 			}
 			for _, album := range lastAlbums {
-				if LastCheck.Before(album.ReleaseDate) {
+				if lastCheck.Before(album.ReleaseDate) && currentTime.After(album.ReleaseDate){
 					logger.General.Printf("New release '%s'\tby %s\tfrom %s\n", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					message := album.Url
 					err := s.bot.SendMessage(message, user.ChatId)

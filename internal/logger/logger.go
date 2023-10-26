@@ -18,6 +18,11 @@ var Error *log.Logger
 
 var logFile *os.File
 
+func init() {
+	General = log.New(os.Stdout, "\x1b[37m", log.Ldate|log.Ltime)
+	Error = log.New(os.Stderr, "\x1b[31mError:\t", log.Ldate|log.Ltime|log.Llongfile)
+}
+
 func Setup(conf *config.LoggerConfig, telegramBot io.Writer) error {
 	var generalWrites []io.Writer
 	var errorWriters []io.Writer
@@ -50,8 +55,8 @@ func Setup(conf *config.LoggerConfig, telegramBot io.Writer) error {
 	generalWriter := io.MultiWriter(generalWrites...)
 	errorWriter := io.MultiWriter(errorWriters...)
 
-	General = log.New(generalWriter, "General:\t", log.Ldate|log.Ltime)
-	Error = log.New(errorWriter, "Error:  \t", log.Ldate|log.Ltime|log.Llongfile)
+	General = log.New(generalWriter, "\x1b[37m", log.Ldate|log.Ltime)
+	Error = log.New(errorWriter, "\x1b[31mError:\t", log.Ldate|log.Ltime|log.Llongfile)
 
 	return nil
 }
