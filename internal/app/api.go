@@ -91,8 +91,8 @@ func (s *Server) CheckNewReleases () {
 				break
 			}
 			for _, album := range lastAlbums {
-				if lastCheck.Before(album.ReleaseDate) && currentTime.After(album.ReleaseDate){
-					logger.General.Printf("New release '%s'\tby %s\tfrom %s\n", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
+				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate){
+					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					message := album.Url
 					err := s.bot.SendMessage(message, user.ChatId)
 					if err != nil {
