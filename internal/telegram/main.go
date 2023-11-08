@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var apiURL = "https://api.telegram.org"
@@ -17,7 +16,7 @@ type Bot struct {
 	token       string
 	commands    []command
 	http_client *http.Client
-	updateDelay time.Duration
+	timeout     int
 	adminChatId int
 	lastUpdate  int
 }
@@ -26,17 +25,16 @@ func NewBot(config *config.TelegramConfig) Bot {
 	return Bot{
 		token:       config.BotToken,
 		http_client: &http.Client{},
-		updateDelay: time.Duration(config.UpdateDelay) * time.Second,
+		timeout:     config.Timeout,
 		adminChatId: config.AdminChatId,
 		lastUpdate:  0,
 	}
 }
 
 type ReceivedMessage struct {
-	updateId int
-	UserId   int
-	ChatId   int
-	Text     string
+	UserId int
+	ChatId int
+	Text   string
 }
 
 func (b *Bot) Run(port uint) {
@@ -48,37 +46,29 @@ func (b *Bot) Run(port uint) {
 	logger.General.Println("Telegram bot started")
 
 	for {
-		time.Sleep(b.updateDelay)
-		messages, err := b.getNewMessages()
+		updates, err := b.getNewUpdates()
 		if err != nil {
-			logger.Error.Println("Error getting new messages: ", err)
-			continue
-		}
-		if len(messages) == 0 {
+			logger.Error.Println("telegram update fetch failed with error: ", err)
 			continue
 		}
 
-		for i := 0; i < len(messages); i++ {
-			if messages[i].updateId > b.lastUpdate {
-				b.lastUpdate = messages[i].updateId
+		for _, update := range updates {
+			if update.Id > b.lastUpdate {
+				b.lastUpdate = update.Id
 			}
-			if !strings.HasPrefix(messages[i].Text, "/") {
-				continue
+			if update.Message != nil {
+				if !strings.HasPrefix(update.Message.Text, "/") {
+					continue
+				}
+				b.handleCommand(update.Message)
+			} else if update.CallbackQuery != nil {
+				err := b.answerCallbackQuery(update.CallbackQuery.Id)
+				if err != nil {
+					logger.Error.Println("telegram bot failed to answer callback query: ", err)
+				}
 			}
-			b.handleCommand(messages[i])
 		}
 
-	}
-}
-
-func (b *Bot) handleCommand(message ReceivedMessage) {
-	for j := 0; j < len(b.commands); j++ {
-		if strings.HasPrefix(message.Text, b.commands[j].Keyword) {
-			logger.General.Println("<-" + message.Text)
-			message.Text = strings.TrimSpace(strings.TrimPrefix(message.Text, b.commands[j].Keyword))
-			b.commands[j].Handler(message)
-			return
-		}
 	}
 }
 
@@ -123,13 +113,11 @@ func (m *BotMessage) BuildURL(token string) string {
 func (b *Bot) SendMessage(message BotMessage) error {
 	response, err := http.Get(message.BuildURL(b.token))
 	if err != nil {
-		// logger.Error.Println("telegram bot failed to send message with error", err)
 		return fmt.Errorf("sending request failed with err: %s", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		// logger.Error.Println("telegram bot failed to send message because of unexpected status code", response)
 		return fmt.Errorf("unexpected status code: %s", response.Status)
 	}
 
@@ -142,4 +130,20 @@ func (b *Bot) Write(p []byte) (n int, err error) {
 		return 0, err
 	}
 	return len(p), nil
+}
+
+func (b *Bot) answerCallbackQuery(queryId string) error {
+	resourse := fmt.Sprintf("/bot%s/answerCallbackQuery", b.token)
+	params := url.Values{
+		"callback_query_id": {queryId},
+	}
+	u, _ := url.ParseRequestURI(apiURL)
+	u.Path = resourse
+	u.RawQuery = params.Encode()
+	requestURL := u.String()
+	_, err := http.Get(requestURL)
+	if err != nil {
+		return fmt.Errorf("sending request failed with err: %s", err)
+	}
+	return nil
 }
