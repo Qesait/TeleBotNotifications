@@ -10,17 +10,17 @@ import (
 	"time"
 )
 
-func (s *Server) Greet(message telegram.Message) {
+func (s *Server) Greet(message telegram.ReceivedMessage) {
 	authUrl, err := s.spotifyClient.GenerateAuthUrl()
 	if err != nil {
 		logger.Error.Println("error generating auth url: ", err)
 		return
 	}
 	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
-	s.bot.SendMessage(text, message.ChatId)
+	s.bot.SendMessage(telegram.BotMessage{ChatId: message.ChatId, Text: text})
 }
 
-func (s *Server) GetCodeFromUrl(message telegram.Message) {
+func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {
 	parsedURL, err := url.Parse(message.Text)
 	if err != nil {
 		logger.Error.Println("error parsing URL: ", err)
@@ -51,11 +51,11 @@ func (s *Server) GetCodeFromUrl(message telegram.Message) {
 }
 
 func stripTime(t time.Time) time.Time {
-    year, month, day := t.Date()
-    return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
 }
 
-func (s *Server) CheckNewReleases () {
+func (s *Server) CheckNewReleases() {
 	for {
 		user := s.db.NextUser()
 		if user == nil {
@@ -84,26 +84,42 @@ func (s *Server) CheckNewReleases () {
 		}
 		logger.General.Println("Going to check", len(artists), "artists")
 
-		for _, artist:= range artists {
+		for _, artist := range artists {
 			lastAlbums, err := s.spotifyClient.GetArtistAlbums(&user.Token, &artist)
 			if err != nil {
 				logger.Error.Printf("error getting albums for artist %s(%s): %s\n", artist.Name, artist.Id, err)
 				break
 			}
 			for _, album := range lastAlbums {
-				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate){
+				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate) {
 					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
-					message := album.Url
-					err := s.bot.SendMessage(message, user.ChatId)
+					parseMode := "Markdown"
+					replyMarkup := "{\"inline_keyboard\": [[{\"text\": \"Add to queue\",\"callback_data\": \"queue\"}]]}"
+					err := s.bot.SendMessage(telegram.BotMessage{
+						ChatId:      user.ChatId,
+						Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
+						ParseMode:   &parseMode,
+						ReplyMarkup: &replyMarkup})
 					if err != nil {
 						logger.Error.Println("error sending message with new release:", err)
 					}
 				}
 			}
 			// TODO: Do somethig with this delay
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 		logger.General.Printf("Finished checking for new releases for user %d", user.UserId)
 		time.Sleep(24 * time.Hour)
 	}
+}
+
+func escapeCharacters(raw string) string {
+	new := ""
+	for _, ch := range raw {
+		if ch == '_' || ch == '*' || ch == '`' || ch == '[' {
+			new = new + "\\"
+		}
+		new = new + string(ch)
+	}
+	return new
 }

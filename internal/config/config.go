@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
 )
 
 type SpotifyConfig struct {
@@ -20,7 +20,7 @@ type SpotifyConfig struct {
 type TelegramConfig struct {
 	BotToken    string
 	AdminChatId int
-	UpdateDelay uint `json:"update_delay"`
+	Timeout     int `json:"timeout"`
 }
 
 type LoggerConfig struct {
@@ -32,10 +32,10 @@ type LoggerConfig struct {
 
 type Config struct {
 	WorkingDirectory string
-	Port              uint           `json:"port"`
-	Spotify           SpotifyConfig  `json:"spotify"`
-	Telegram          TelegramConfig `json:"telegram"`
-	Logger            LoggerConfig   `json:"logger"`
+	Port             uint           `json:"port"`
+	Spotify          SpotifyConfig  `json:"spotify"`
+	Telegram         TelegramConfig `json:"telegram"`
+	Logger           LoggerConfig   `json:"logger"`
 }
 
 func (c *Config) readEnv() error {

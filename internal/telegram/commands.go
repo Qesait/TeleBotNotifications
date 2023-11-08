@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
-type CommandHandler func(Message)
+type CommandHandler func(ReceivedMessage)
 
 type command struct {
 	Keyword     string         `json:"command"`
@@ -62,4 +63,17 @@ func (b *Bot) UpdateCommands() error {
 	}
 
 	return nil
+}
+
+func (b *Bot) handleCommand(m *message) {
+	for j := 0; j < len(b.commands); j++ {
+		if strings.HasPrefix(m.Text, b.commands[j].Keyword) {
+			b.commands[j].Handler(ReceivedMessage{
+				UserId: m.From.Id,
+				ChatId: m.Chat.Id,
+				Text:   strings.TrimSpace(strings.TrimPrefix(m.Text, b.commands[j].Keyword)),
+			})
+			return
+		}
+	}
 }
