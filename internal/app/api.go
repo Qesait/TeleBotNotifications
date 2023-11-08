@@ -10,17 +10,17 @@ import (
 	"time"
 )
 
-func (s *Server) Greet(message telegram.Message) {
+func (s *Server) Greet(message telegram.ReceivedMessage) {
 	authUrl, err := s.spotifyClient.GenerateAuthUrl()
 	if err != nil {
 		logger.Error.Println("error generating auth url: ", err)
 		return
 	}
 	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
-	s.bot.SendMessage(text, message.ChatId)
+	s.bot.SendMessage(telegram.BotMessage{ChatId: message.ChatId, Text: text})
 }
 
-func (s *Server) GetCodeFromUrl(message telegram.Message) {
+func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {
 	parsedURL, err := url.Parse(message.Text)
 	if err != nil {
 		logger.Error.Println("error parsing URL: ", err)
@@ -93,8 +93,7 @@ func (s *Server) CheckNewReleases () {
 			for _, album := range lastAlbums {
 				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate){
 					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
-					message := album.Url
-					err := s.bot.SendMessage(message, user.ChatId)
+					err := s.bot.SendMessage(telegram.BotMessage{ChatId: user.ChatId, Text: album.Url})
 					if err != nil {
 						logger.Error.Println("error sending message with new release:", err)
 					}

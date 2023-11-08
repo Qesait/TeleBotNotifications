@@ -8,7 +8,7 @@ import (
 	"net/url"
 )
 
-type CommandHandler func(Message)
+type CommandHandler func(ReceivedMessage)
 
 type command struct {
 	Keyword     string         `json:"command"`

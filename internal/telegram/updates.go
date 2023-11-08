@@ -35,8 +35,8 @@ type updateResponse struct {
 	Result []update `json:"result"`
 }
 
-func extract(update_with_message update) Message {
-	return Message{
+func extract(update_with_message update) ReceivedMessage {
+	return ReceivedMessage{
 		updateId: update_with_message.UpdateId,
 		UserId:   update_with_message.Message.From.Id,
 		ChatId:   update_with_message.Message.Chat.Id,
@@ -57,7 +57,7 @@ func (b *Bot) createUpdateUrl() string {
 	return u.String()
 }
 
-func (b *Bot) getNewMessages() ([]Message, error) {
+func (b *Bot) getNewMessages() ([]ReceivedMessage, error) {
 	requestUrl := b.createUpdateUrl()
 	response, err := b.http_client.Get(requestUrl)
 	if err != nil {
@@ -75,7 +75,7 @@ func (b *Bot) getNewMessages() ([]Message, error) {
 		return nil, fmt.Errorf("decoding failed with error: %s", err)
 	}
 
-	messages := make([]Message, 0, len(updates.Result))
+	messages := make([]ReceivedMessage, 0, len(updates.Result))
 	for i := 0; i < len(updates.Result); i++ {
 		messages = append(messages, extract(updates.Result[i]))
 	}

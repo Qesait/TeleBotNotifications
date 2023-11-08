@@ -32,7 +32,7 @@ func NewBot(config *config.TelegramConfig) Bot {
 	}
 }
 
-type Message struct {
+type ReceivedMessage struct {
 	updateId int
 	UserId   int
 	ChatId   int
@@ -71,7 +71,7 @@ func (b *Bot) Run(port uint) {
 	}
 }
 
-func (b *Bot) handleCommand(message Message) {
+func (b *Bot) handleCommand(message ReceivedMessage) {
 	for j := 0; j < len(b.commands); j++ {
 		if strings.HasPrefix(message.Text, b.commands[j].Keyword) {
 			logger.General.Println("<-" + message.Text)
@@ -82,19 +82,46 @@ func (b *Bot) handleCommand(message Message) {
 	}
 }
 
-func (b *Bot) SendMessage(message string, to int) error {
-	resource := fmt.Sprintf("/bot%s/sendMessage", b.token)
+type BotMessage struct {
+	ChatId                int
+	Text                  string
+	ParseMode             *string
+	DisableWebPagePreview *bool
+	DisableNotification   *bool
+	ProtectContent        *bool
+	ReplyMarkup           *string
+}
+
+func (m *BotMessage) BuildURL(token string) string {
+	resource := fmt.Sprintf("/bot%s/sendMessage", token)
 	params := url.Values{
-		"chat_id": {strconv.Itoa(to)},
-		"text":    {message},
+		"chat_id": {strconv.Itoa(m.ChatId)},
+		"text":    {m.Text},
+	}
+	if m.ParseMode != nil {
+		params.Add("parse_mode", *m.ParseMode)
+	}
+	if m.DisableWebPagePreview != nil {
+		params.Add("disable_web_page_preview", strconv.FormatBool(*m.DisableWebPagePreview))
+	}
+	if m.DisableNotification != nil {
+		params.Add("disable_notification", strconv.FormatBool(*m.DisableNotification))
+	}
+	if m.ProtectContent != nil {
+		params.Add("protect_content", strconv.FormatBool(*m.ProtectContent))
+	}
+	if m.ReplyMarkup != nil {
+		params.Add("reply_markup", *m.ReplyMarkup)
 	}
 
 	u, _ := url.ParseRequestURI(apiURL)
 	u.Path = resource
 	u.RawQuery = params.Encode()
-	requestUrl := u.String()
+	return u.String()
+}
 
-	response, err := http.Get(requestUrl)
+func (b *Bot) SendMessage(message BotMessage) error {
+	response, err := http.Get(message.BuildURL(b.token))
 	if err != nil {
 		// logger.Error.Println("telegram bot failed to send message with error", err)
 		return fmt.Errorf("sending request failed with err: %s", err)
@@ -110,7 +137,7 @@ func (b *Bot) SendMessage(message string, to int) error {
 }
 
 func (b *Bot) Write(p []byte) (n int, err error) {
-	err = b.SendMessage(string(p), b.adminChatId)
+	err = b.SendMessage(BotMessage{ChatId: b.adminChatId, Text: string(p)})
 	if err != nil {
 		return 0, err
 	}
