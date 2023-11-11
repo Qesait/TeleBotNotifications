@@ -16,8 +16,16 @@ func (s *Server) Greet(message telegram.ReceivedMessage) {
 		logger.Error.Println("error generating auth url: ", err)
 		return
 	}
-	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
-	s.bot.SendMessage(telegram.BotMessage{ChatId: message.ChatId, Text: text})
+	text := "Press button below to start authentication. Then use \"/auth <URL>\" with URL you were redirected"
+	replyMarkup := fmt.Sprintf("{\"inline_keyboard\": [[{\"text\": \"Authenticate\",\"url\": \"%s\"}]]}", *authUrl)
+	err = s.bot.SendMessage(telegram.BotMessage{
+		ChatId:      message.ChatId,
+		Text:        text,
+		ReplyMarkup: &replyMarkup})
+	if err != nil {
+		logger.Error.Println("error sending auth url: ", err)
+		return
+	}
 }
 
 func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {

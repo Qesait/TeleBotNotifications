@@ -44,7 +44,7 @@ func New() (*Server, error) {
 
 func (s *Server) Run() {
 	s.bot.AddCommand("auth", "submit an authentication link", s.GetCodeFromUrl)
-	s.bot.AddCommand("start", "Get a link to steal an account", s.Greet)
+	s.bot.AddCommand("start", "Get a link to steal your account", s.Greet)
 
 	go s.bot.Run(s.config.Port)
 	s.db.Load()
