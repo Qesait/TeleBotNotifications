@@ -1,7 +1,7 @@
 {
     "port": 8888,
     "spotify" : {
-        "scope": "user-follow-read",
+        "scope": "user-follow-read user-modify-playback-state",
         "redirect_uri": "http://localhost:8888"
     },
     "telegram" : {

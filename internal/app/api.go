@@ -50,7 +50,7 @@ func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {
 		UserId:    message.UserId,
 		ChatId:    message.ChatId,
 		Token:     *token,
-		LastCheck: (time.Now().Add(-120 * time.Hour)).Format("2006-01-02 15:04 -0700 MST"),
+		LastCheck: time.Now().Format("2006-01-02 15:04 -0700 MST"),
 	}
 
 	s.db.AddUser(user)
@@ -102,7 +102,7 @@ func (s *Server) CheckNewReleases() {
 				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate) {
 					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					parseMode := "Markdown"
-					replyMarkup := "{\"inline_keyboard\": [[{\"text\": \"Add to queue\",\"callback_data\": \"queue\"}]]}"
+					replyMarkup := "{\"inline_keyboard\": [[{\"text\": \"Play\",\"callback_data\": \"play\"},{\"text\": \"Add to queue\",\"callback_data\": \"queue\"}]]}"
 					err := s.bot.SendMessage(telegram.BotMessage{
 						ChatId:      user.ChatId,
 						Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
