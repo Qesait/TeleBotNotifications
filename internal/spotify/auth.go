@@ -137,3 +137,14 @@ func (c *Client) refreshAccessToken(token *OAuth2Token) (*OAuth2Token, error) {
 
 	return new_token, nil
 }
+
+func (c *Client) checkToken (token *OAuth2Token) error {
+	if time.Now().After(token.Expires) {
+		refreshed_token, err := c.refreshAccessToken(token)
+		if err != nil {
+			return err
+		}
+		*token = *refreshed_token
+	}
+	return nil
+}

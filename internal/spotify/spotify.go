@@ -19,8 +19,13 @@ type Album struct {
 	Artists     []Artist
 }
 
-// TODO: create internal struct full matching spotify's 
+// TODO: create internal struct full matching spotify's
 type Artist struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type errorResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
 }
