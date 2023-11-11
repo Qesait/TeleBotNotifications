@@ -17,11 +17,10 @@ func (s *Server) Greet(message telegram.ReceivedMessage) {
 		return
 	}
 	text := "Press button below to start authentication. Then use \"/auth <URL>\" with URL you were redirected"
-	replyMarkup := fmt.Sprintf("{\"inline_keyboard\": [[{\"text\": \"Authenticate\",\"url\": \"%s\"}]]}", *authUrl)
 	err = s.bot.SendMessage(telegram.BotMessage{
 		ChatId:      message.ChatId,
 		Text:        text,
-		ReplyMarkup: &replyMarkup})
+		ReplyMarkup: telegram.ButtonRow(telegram.URLButton("Authenticate", *authUrl))})
 	if err != nil {
 		logger.Error.Println("error sending auth url: ", err)
 		return
@@ -102,12 +101,11 @@ func (s *Server) CheckNewReleases() {
 				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate) {
 					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					parseMode := "Markdown"
-					replyMarkup := "{\"inline_keyboard\": [[{\"text\": \"Play\",\"callback_data\": \"play\"},{\"text\": \"Add to queue\",\"callback_data\": \"queue\"}]]}"
 					err := s.bot.SendMessage(telegram.BotMessage{
 						ChatId:      user.ChatId,
 						Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
 						ParseMode:   &parseMode,
-						ReplyMarkup: &replyMarkup})
+						ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+ album.Uri), telegram.CallbackButton("Add to queue", "/queue "+ album.Uri))})
 					if err != nil {
 						logger.Error.Println("error sending message with new release:", err)
 					}

@@ -244,6 +244,7 @@ type Album struct {
 	AlbumType   string
 	AlbumGroup  string
 	Url         string
+	Uri         string
 	ImageUrl    string
 	ReleaseDate time.Time
 	Artists     []Artist
@@ -265,12 +266,13 @@ type album struct {
 	Name                 string   `json:"name"`
 	ReleaseDate          string   `json:"release_date"`
 	ReleaseDatePrecision string   `json:"release_date_precision"`
+	Uri                  string   `json:"uri"`
 	Artists              []Artist `json:"artists"`
 	AlbumGroup           string   `json:"album_group"`
 }
 
 type getArtistAlbumsResponse struct {
-	Next   *string  `json:"next"`
+	Next   *string `json:"next"`
 	Albums []album `json:"items"`
 }
 
@@ -307,11 +309,12 @@ func decodeAlbulmsResponse(response *http.Response) ([]Album, *string, error) {
 		}
 
 		album := Album{
-			Id:          responseData.Albums[i].Id,
-			Name:        responseData.Albums[i].Name,
-			AlbumType:   responseData.Albums[i].AlbumType,
-			AlbumGroup:  responseData.Albums[i].AlbumGroup,
-			Url:         responseData.Albums[i].ExternalUrls.Spotify,
+			Id:         responseData.Albums[i].Id,
+			Name:       responseData.Albums[i].Name,
+			AlbumType:  responseData.Albums[i].AlbumType,
+			AlbumGroup: responseData.Albums[i].AlbumGroup,
+			Url:        responseData.Albums[i].ExternalUrls.Spotify,
+			Uri:        responseData.Albums[i].Uri,
 			// ImageUrl:    responseData.Albums[i].Images[0].Url,
 			ReleaseDate: t,
 			Artists:     responseData.Albums[i].Artists,
@@ -380,7 +383,7 @@ func (c *Client) getArtistAlbums(token *OAuth2Token, artistId string, include_gr
 	return albums, nil
 }
 
-//album,single,compilation,appears_on
+// album,single,compilation,appears_on
 func (c *Client) GetArtistAlbums(token *OAuth2Token, artist *Artist) ([]Album, error) {
 	return c.getArtistAlbums(token, artist.Id, "album,single", 50)
 }

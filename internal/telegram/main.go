@@ -4,6 +4,7 @@ import (
 	"TeleBotNotifications/internal/config"
 	"TeleBotNotifications/internal/logger"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +16,7 @@ var apiURL = "https://api.telegram.org"
 type Bot struct {
 	token       string
 	commands    []command
+	callbacks   []callback
 	http_client *http.Client
 	timeout     int
 	adminChatId int
@@ -29,12 +31,6 @@ func NewBot(config *config.TelegramConfig) Bot {
 		adminChatId: config.AdminChatId,
 		lastUpdate:  0,
 	}
-}
-
-type ReceivedMessage struct {
-	UserId int
-	ChatId int
-	Text   string
 }
 
 func (b *Bot) Run(port uint) {
@@ -62,10 +58,7 @@ func (b *Bot) Run(port uint) {
 				}
 				b.handleCommand(update.Message)
 			} else if update.CallbackQuery != nil {
-				err := b.answerCallbackQuery(update.CallbackQuery.Id)
-				if err != nil {
-					logger.Error.Println("telegram bot failed to answer callback query: ", err)
-				}
+				b.handleCallback(update.CallbackQuery)
 			}
 		}
 
@@ -111,14 +104,19 @@ func (m *BotMessage) BuildURL(token string) string {
 }
 
 func (b *Bot) SendMessage(message BotMessage) error {
-	response, err := http.Get(message.BuildURL(b.token))
+	url := message.BuildURL(b.token)
+	response, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("sending request failed with err: %s", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %s", response.Status)
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("unexpected status code: %s", response.Status)
+		}
+		return fmt.Errorf("status code: %s, error: %s", response.Status, body)
 	}
 
 	return nil
@@ -132,18 +130,22 @@ func (b *Bot) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (b *Bot) answerCallbackQuery(queryId string) error {
-	resourse := fmt.Sprintf("/bot%s/answerCallbackQuery", b.token)
-	params := url.Values{
-		"callback_query_id": {queryId},
+// );
+func ButtonRow(buttons ...string) *string {
+	row := "{\"inline_keyboard\": [["
+	for i, button := range buttons {
+		if i != 0 {
+			row = row + ","
+		}
+		row = row + button
 	}
-	u, _ := url.ParseRequestURI(apiURL)
-	u.Path = resourse
-	u.RawQuery = params.Encode()
-	requestURL := u.String()
-	_, err := http.Get(requestURL)
-	if err != nil {
-		return fmt.Errorf("sending request failed with err: %s", err)
-	}
-	return nil
+	row = row + "]]}"
+	return &row
+}
+
+func CallbackButton(text, data string) string {
+	return fmt.Sprintf("{\"text\": \"%s\",\"callback_data\": \"%s\"}", text, data)
+}
+func URLButton(text, url string) string {
+	return fmt.Sprintf("{\"text\": \"%s\",\"url\": \"%s\"}", text, url)
 }

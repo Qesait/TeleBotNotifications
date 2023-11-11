@@ -45,9 +45,15 @@ func New() (*Server, error) {
 func (s *Server) Run() {
 	s.bot.AddCommand("auth", "submit an authentication link", s.GetCodeFromUrl)
 	s.bot.AddCommand("start", "Get a link to steal your account", s.Greet)
+	s.bot.AddCallback("queue", s.WriteQuery)
+	s.bot.AddCallback("play", s.WriteQuery)
 
 	go s.bot.Run(s.config.Port)
 	s.db.Load()
 
 	s.CheckNewReleases()
+}
+
+func (s *Server) WriteQuery(callback telegram.Callback) {
+	s.bot.SendMessage(telegram.BotMessage{ChatId: callback.UserId, Text: fmt.Sprintf("%d %s %s", callback.UserId, callback.ChatId, callback.Data)})
 }
