@@ -8,9 +8,9 @@ import (
 	"net/url"
 )
 
-func (c *Client) AddItemtoPlaybackQueue(token *OAuth2Token, uri string, deviceId *string) error {
+func (c *Client) AddItemtoPlaybackQueue(token *OAuth2Token, uri, deviceId *string) error {
 	const queueResource = "/v1/me/player/queue"
-	params := url.Values{"uri": {uri}}
+	params := url.Values{"uri": {*uri}}
 	if deviceId != nil {
 		params.Add("device_id", *deviceId)
 	}
@@ -26,25 +26,26 @@ func (c *Client) AddItemtoPlaybackQueue(token *OAuth2Token, uri string, deviceId
 	}
 	request.Header.Add("Authorization", "Bearer  "+token.AccessToken)
 	response, err := c.client.Do(request)
-	if err != nil {
+	if err != nil || response.StatusCode != http.StatusNoContent {
 		explanation := &errorResponse{}
 		if err := json.NewDecoder(response.Body).Decode(explanation); err != nil {
-			return fmt.Errorf("http error %s", response.Status)
+			return fmt.Errorf("http error %s, cant  decode response %s", response.Status, err)
 		}
-		return fmt.Errorf("http request fail: %s, %s", response.Status, explanation.Message)
+		return fmt.Errorf("http request fail: %s, %s", response.Status, explanation.Error.Message)
 	}
 
 	return nil
 }
 
 // uris, ofset and position_ms not implemented
-func (c *Client) StartResumePlayback(token *OAuth2Token, deviceId, contextURI *string) error {
-	const queueResource = "/v1//me/player/play"
+func (c *Client) StartResumePlayback(token *OAuth2Token, contextURI, deviceId *string) error {
+	const queueResource = "/v1/me/player/play"
 	params := url.Values{}
+	requestURL := fmt.Sprintf("%s%s", apiUrl, queueResource)
 	if deviceId != nil {
 		params.Add("device_id", *deviceId)
+		requestURL = requestURL + "?" + params.Encode()
 	}
-	requestURL := fmt.Sprintf("%s%s?%s", apiUrl, queueResource, params.Encode())
 
 	var request *http.Request
 	var err error
@@ -69,14 +70,16 @@ func (c *Client) StartResumePlayback(token *OAuth2Token, deviceId, contextURI *s
 	request.Header.Add("Authorization", "Bearer  "+token.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 
+	// TODO: check all the code, becaues this will return error only on 2**
 	response, err := c.client.Do(request)
-	if err != nil {
+	if err != nil || response.StatusCode != http.StatusNoContent {
 		explanation := &errorResponse{}
 		if err := json.NewDecoder(response.Body).Decode(explanation); err != nil {
-			return fmt.Errorf("http error %s", response.Status)
+			return fmt.Errorf("http error %s, cant  decode response %s", response.Status, err)
 		}
-		return fmt.Errorf("http request fail: %s, %s", response.Status, explanation.Message)
+		return fmt.Errorf("http request fail: %s, %s", response.Status, explanation.Error.Message)
 	}
 
 	return nil
 }
+

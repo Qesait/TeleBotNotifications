@@ -2,10 +2,12 @@ package spotify
 
 import (
 	"time"
+	"fmt"
+	"net/http"
 )
 
 const authUrl = "https://accounts.spotify.com"
-const apiUrl = "https://api.spotify.com/"
+const apiUrl = "https://api.spotify.com"
 
 type Album struct {
 	Id          string
@@ -26,6 +28,22 @@ type Artist struct {
 }
 
 type errorResponse struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
+	Error struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+
+func printRequestInfo(req *http.Request) {
+	fmt.Println("Request Method:", req.Method)
+	fmt.Println("Request URL:", req.URL)
+	fmt.Println("Request Proto:", req.Proto)
+	fmt.Println("Request Header:")
+	for key, values := range req.Header {
+		for _, value := range values {
+			fmt.Printf("  %s: %s\n", key, value)
+		}
+	}
+	fmt.Println("Request Body:", req.Body)
 }
