@@ -546,7 +546,7 @@ func Test_getArtistAlbums(t *testing.T) {
 						"release_date": "2001",
 						"release_date_precision": "year",
 						"type": "album",
-						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"uri": "spotify:album:1up",
 						"artists": [
 						  {
 							"external_urls": {
@@ -565,7 +565,7 @@ func Test_getArtistAlbums(t *testing.T) {
 						"album_type": "compilation",
 						"total_tracks": 9,
 						"external_urls": {
-						  "spotify": "another_spotify_uri"
+						  "spotify": "another_spotify_url"
 						},
 						"id": "2up3OPMp9Tb4dAKM2erWXQ",
 						"images": [
@@ -579,7 +579,7 @@ func Test_getArtistAlbums(t *testing.T) {
 						"release_date": "1981-12-01",
 						"release_date_precision": "day",
 						"type": "album",
-						"uri": "spotify:album:2up3OPMp9Tb4dAKM2erWXQ",
+						"uri": "spotify:album:2up",
 						"artists": [
 						  {
 							"external_urls": {
@@ -599,8 +599,8 @@ func Test_getArtistAlbums(t *testing.T) {
 				`,
 				expected_request: "/v1/artists/id/albums",
 				expected_result: []Album{
-					{"2up3OPMp9Tb4dAKM2er111", "name-1", "album", "compilation", "spotify_url", "image-url-1", time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC), []Artist{{"1", "name-1"}}},
-					{"2up3OPMp9Tb4dAKM2erWXQ", "name-2", "compilation", "compilation", "another_spotify_uri", "image-url-2", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC), []Artist{{"2", "name-2"}}},
+					{"2up3OPMp9Tb4dAKM2er111", "name-1", "album", "compilation", "spotify_url", "spotify:album:1up", "image-url-1", time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC), []Artist{{"1", "name-1"}}},
+					{"2up3OPMp9Tb4dAKM2erWXQ", "name-2", "compilation", "compilation", "another_spotify_url", "spotify:album:2up", "image-url-2", time.Date(1981, 12, 1, 0, 0, 0, 0, time.UTC), []Artist{{"2", "name-2"}}},
 				},
 			},
 			wantErr: false,

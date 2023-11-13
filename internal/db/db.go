@@ -4,6 +4,7 @@ import (
 	"TeleBotNotifications/internal/logger"
 	"TeleBotNotifications/internal/spotify"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -26,6 +27,17 @@ type DB struct {
 
 func NewDB(saveFile string) DB {
 	return DB{saveFile: saveFile, nextUser: 0}
+}
+
+func (db *DB) Get(userId int) (*User, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	for _, user := range db.users {
+		if user.UserId == userId {
+			return &user, nil
+		}
+	}
+	return nil, errors.New("user not found")
 }
 
 func (db *DB) Load() {

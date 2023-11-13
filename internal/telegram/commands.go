@@ -9,13 +9,14 @@ import (
 	"strings"
 )
 
-type CommandHandler func(ReceivedMessage)
-
 type command struct {
 	Keyword     string         `json:"command"`
 	Description string         `json:"description"`
 	Handler     CommandHandler `json:"-"`
 }
+
+// TODO: type CommandHandler func(ReceivedMessage) error
+type CommandHandler func(ReceivedMessage)
 
 func (b *Bot) AddCommand(keyword string, description string, handler CommandHandler) {
 	b.commands = append(b.commands, command{
@@ -63,6 +64,12 @@ func (b *Bot) UpdateCommands() error {
 	}
 
 	return nil
+}
+
+type ReceivedMessage struct {
+	UserId int
+	ChatId int
+	Text   string
 }
 
 func (b *Bot) handleCommand(m *message) {

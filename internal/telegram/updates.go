@@ -34,7 +34,7 @@ type callbackQuery struct {
 	From user   `json:"from"`
 	// message
 	InlineMessageId *string `json:"inline_message_id"`
-	ChatInstance    *string `json:"chat_instance"`
+	ChatInstance    string `json:"chat_instance"`
 	Data            *string `json:"data"`
 	GameShortName   *string `json:"game_short_name"`
 }

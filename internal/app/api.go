@@ -16,8 +16,15 @@ func (s *Server) Greet(message telegram.ReceivedMessage) {
 		logger.Error.Println("error generating auth url: ", err)
 		return
 	}
-	text := fmt.Sprintf("Open this link %s.\nCopy and past here url after redirect", *authUrl)
-	s.bot.SendMessage(telegram.BotMessage{ChatId: message.ChatId, Text: text})
+	text := "Press button below to start authentication. Then use \"/auth <URL>\" with URL you were redirected"
+	err = s.bot.SendMessage(telegram.BotMessage{
+		ChatId:      message.ChatId,
+		Text:        text,
+		ReplyMarkup: telegram.ButtonRow(telegram.URLButton("Authenticate", *authUrl))})
+	if err != nil {
+		logger.Error.Println("error sending auth url: ", err)
+		return
+	}
 }
 
 func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {
@@ -42,7 +49,7 @@ func (s *Server) GetCodeFromUrl(message telegram.ReceivedMessage) {
 		UserId:    message.UserId,
 		ChatId:    message.ChatId,
 		Token:     *token,
-		LastCheck: (time.Now().Add(-120 * time.Hour)).Format("2006-01-02 15:04 -0700 MST"),
+		LastCheck: time.Now().Format("2006-01-02 15:04 -0700 MST"),
 	}
 
 	s.db.AddUser(user)
@@ -94,12 +101,11 @@ func (s *Server) CheckNewReleases() {
 				if !lastCheck.After(album.ReleaseDate) && currentTime.After(album.ReleaseDate) {
 					logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, artist.Name, album.ReleaseDate.Format("02.01.2006"))
 					parseMode := "Markdown"
-					replyMarkup := "{\"inline_keyboard\": [[{\"text\": \"Add to queue\",\"callback_data\": \"queue\"}]]}"
 					err := s.bot.SendMessage(telegram.BotMessage{
 						ChatId:      user.ChatId,
 						Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
 						ParseMode:   &parseMode,
-						ReplyMarkup: &replyMarkup})
+						ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+ album.Uri), telegram.CallbackButton("Add to queue", "/queue "+ album.Id))})
 					if err != nil {
 						logger.Error.Println("error sending message with new release:", err)
 					}
@@ -122,4 +128,35 @@ func escapeCharacters(raw string) string {
 		new = new + string(ch)
 	}
 	return new
+}
+
+
+func (s *Server) AddToQueue(callback telegram.Callback) {
+	user, err := s.db.Get(callback.UserId)
+	if err != nil {
+		logger.Error.Printf("add to queue failed with error: %s\n", err)
+	}
+	tracks, err := s.spotifyClient.GetAlbumTracks(&user.Token, callback.Data, 50, 0, nil)
+	if err != nil {
+		logger.Error.Printf("failed getting album tracks: %s\n", err)
+	}
+	for _, track := range tracks {
+		err = s.spotifyClient.AddItemtoPlaybackQueue(&user.Token, &track.Uri, nil)
+		if err != nil {
+			logger.Error.Printf("add to queue failed with error: %s\n", err)
+			// TODO: collect errors or skip them. Maybe problem with one track only, but maybe I will get 50 notifications for album
+			break
+		}
+	}
+}
+
+func (s *Server) PlayTrack(callback telegram.Callback) {
+	user, err := s.db.Get(callback.UserId)
+	if err != nil {
+		logger.Error.Printf("play track failed with error: %s\n", err)
+	}
+	err = s.spotifyClient.StartResumePlayback(&user.Token, &callback.Data, nil)
+	if err != nil {
+		logger.Error.Printf("play track failed with error: %s\n", err)
+	}
 }
