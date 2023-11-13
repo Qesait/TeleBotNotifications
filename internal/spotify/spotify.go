@@ -1,9 +1,9 @@
 package spotify
 
 import (
-	"time"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 const authUrl = "https://accounts.spotify.com"
@@ -34,6 +34,37 @@ type errorResponse struct {
 	} `json:"error"`
 }
 
+type ExternalUrls struct {
+	Spotify string `json:"spotify"`
+}
+
+type SimplifiedArtist struct {
+	ExternalUrls ExternalUrls `json:"external_urls"`
+	Href         string       `json:"href"`
+	Id           string       `json:"id"`
+	Name         string       `json:"name"`
+	Type         string       `json:"type"`
+	Uri          string       `json:"uri"`
+}
+
+type SimplifiedTrack struct {
+	Artists          []SimplifiedArtist
+	// AvailableMarkets []string     `json:"available_markets"`
+	DiscNumber       int          `json:"disc_number"`
+	DurationMs       int          `json:"duration_ms"`
+	Explicit         bool         `json:"explicit"`
+	ExternalUrls     ExternalUrls `json:"external_urls"`
+	Href             string       `json:"href"`
+	Id               string       `json:"id"`
+	IsPlayable       bool         `json:"is_playable"`
+	// LinkedFrom
+	// Restrictions
+	Name         string       `json:"name"`
+	TrackNumber int `json:"track_number"`
+	Type         string       `json:"type"`
+	Uri          string       `json:"uri"`
+	// IsLocal
+}
 
 func printRequestInfo(req *http.Request) {
 	fmt.Println("Request Method:", req.Method)

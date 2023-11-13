@@ -10,8 +10,6 @@ import (
 )
 
 
-
-
 func (c *Client) GetFollowedArtists(token *OAuth2Token) ([]Artist, error) {
 	return c.getFollowedArtists(token, 50)
 }
@@ -135,10 +133,13 @@ func (c *Client) getArtistAlbums(token *OAuth2Token, artistId string, include_gr
 		request.Header.Add("Authorization", "Bearer  "+token.AccessToken)
 
 		response, err := c.client.Do(request)
-		if err != nil {
-			return nil, err
+		if err != nil || response.StatusCode != http.StatusOK {
+			explanation := &errorResponse{}
+			if err := json.NewDecoder(response.Body).Decode(explanation); err != nil {
+				return nil, fmt.Errorf("http error %s, cant  decode response %s", response.Status, err)
+			}
+			return nil, fmt.Errorf("http request fail: %s, %s", response.Status, explanation.Error.Message)
 		}
-
 		var albumsPart []Album
 		albumsPart, requestUrl, err = decodeAlbulmsResponse(response)
 		if err != nil {

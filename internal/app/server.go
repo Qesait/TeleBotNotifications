@@ -53,30 +53,3 @@ func (s *Server) Run() {
 
 	s.CheckNewReleases()
 }
-
-func (s *Server) WriteQuery(callback telegram.Callback) {
-	s.bot.SendMessage(telegram.BotMessage{ChatId: callback.UserId, Text: callback.Data})
-}
-
-func (s *Server) AddToQueue(callback telegram.Callback) {
-	user, err := s.db.Get(callback.UserId)
-	logger.General.Println("Hi from add to queue")
-	if err != nil {
-		logger.Error.Printf("add to queue failed with error: %s\n", err)
-	}
-	err = s.spotifyClient.AddItemtoPlaybackQueue(&user.Token, &callback.Data, nil)
-	if err != nil {
-		logger.Error.Printf("add to queue failed with error: %s\n", err)
-	}
-}
-
-func (s *Server) PlayTrack(callback telegram.Callback) {
-	user, err := s.db.Get(callback.UserId)
-	if err != nil {
-		logger.Error.Printf("play track failed with error: %s\n", err)
-	}
-	err = s.spotifyClient.StartResumePlayback(&user.Token, &callback.Data, nil)
-	if err != nil {
-		logger.Error.Printf("play track failed with error: %s\n", err)
-	}
-}

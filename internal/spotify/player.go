@@ -70,7 +70,6 @@ func (c *Client) StartResumePlayback(token *OAuth2Token, contextURI, deviceId *s
 	request.Header.Add("Authorization", "Bearer  "+token.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 
-	// TODO: check all the code, becaues this will return error only on 2**
 	response, err := c.client.Do(request)
 	if err != nil || response.StatusCode != http.StatusNoContent {
 		explanation := &errorResponse{}

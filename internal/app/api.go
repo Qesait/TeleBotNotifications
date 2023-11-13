@@ -105,7 +105,7 @@ func (s *Server) CheckNewReleases() {
 						ChatId:      user.ChatId,
 						Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
 						ParseMode:   &parseMode,
-						ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+ album.Uri), telegram.CallbackButton("Add to queue", "/queue "+ album.Uri))})
+						ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+ album.Uri), telegram.CallbackButton("Add to queue", "/queue "+ album.Id))})
 					if err != nil {
 						logger.Error.Println("error sending message with new release:", err)
 					}
@@ -128,4 +128,35 @@ func escapeCharacters(raw string) string {
 		new = new + string(ch)
 	}
 	return new
+}
+
+
+func (s *Server) AddToQueue(callback telegram.Callback) {
+	user, err := s.db.Get(callback.UserId)
+	if err != nil {
+		logger.Error.Printf("add to queue failed with error: %s\n", err)
+	}
+	tracks, err := s.spotifyClient.GetAlbumTracks(&user.Token, callback.Data, 50, 0, nil)
+	if err != nil {
+		logger.Error.Printf("failed getting album tracks: %s\n", err)
+	}
+	for _, track := range tracks {
+		err = s.spotifyClient.AddItemtoPlaybackQueue(&user.Token, &track.Uri, nil)
+		if err != nil {
+			logger.Error.Printf("add to queue failed with error: %s\n", err)
+			// TODO: collect errors or skip them. Maybe problem with one track only, but maybe I will get 50 notifications for album
+			break
+		}
+	}
+}
+
+func (s *Server) PlayTrack(callback telegram.Callback) {
+	user, err := s.db.Get(callback.UserId)
+	if err != nil {
+		logger.Error.Printf("play track failed with error: %s\n", err)
+	}
+	err = s.spotifyClient.StartResumePlayback(&user.Token, &callback.Data, nil)
+	if err != nil {
+		logger.Error.Printf("play track failed with error: %s\n", err)
+	}
 }
