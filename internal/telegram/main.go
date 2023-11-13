@@ -4,7 +4,7 @@ import (
 	"TeleBotNotifications/internal/config"
 	"TeleBotNotifications/internal/logger"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -56,9 +56,9 @@ func (b *Bot) Run(port uint) {
 				if !strings.HasPrefix(update.Message.Text, "/") {
 					continue
 				}
-				b.handleCommand(update.Message)
+				go b.handleCommand(update.Message)
 			} else if update.CallbackQuery != nil {
-				b.handleCallback(update.CallbackQuery)
+				go b.handleCallback(update.CallbackQuery)
 			}
 		}
 
@@ -112,7 +112,7 @@ func (b *Bot) SendMessage(message BotMessage) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			return fmt.Errorf("unexpected status code: %s", response.Status)
 		}
