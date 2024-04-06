@@ -1,14 +1,16 @@
 package telegram
 
 import (
-	"TeleBotNotifications/internal/config"
-	"TeleBotNotifications/internal/logger"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"TeleBotNotifications/internal/config"
+	"TeleBotNotifications/internal/logger"
 )
 
 var apiURL = "https://api.telegram.org"
@@ -28,37 +30,42 @@ func NewBot(config *config.TelegramConfig) Bot {
 		token:       config.BotToken,
 		http_client: &http.Client{},
 		timeout:     config.Timeout,
-		adminChatId: config.AdminChatId,
+		adminChatId: config.ChatId,
 		lastUpdate:  0,
 	}
 }
 
-func (b *Bot) Run(port uint) {
+func (b *Bot) Run(port uint, ctx context.Context) {
 	err := b.UpdateCommands()
 	if err != nil {
 		logger.Error.Println(err)
 	}
-
 	logger.General.Println("Telegram bot started")
 
 	for {
-		updates, err := b.getNewUpdates()
-		if err != nil {
-			logger.Error.Println("telegram update fetch failed with error: ", err)
-			continue
-		}
-
-		for _, update := range updates {
-			if update.Id > b.lastUpdate {
-				b.lastUpdate = update.Id
+		select {
+		case <-ctx.Done():
+			logger.General.Println("Telegram bot stopped")
+			return
+		default:
+			updates, err := b.getNewUpdates()
+			if err != nil {
+				logger.Error.Println("telegram update fetch failed with error: ", err)
+				continue
 			}
-			if update.Message != nil {
-				if !strings.HasPrefix(update.Message.Text, "/") {
-					continue
+
+			for _, update := range updates {
+				if update.Id > b.lastUpdate {
+					b.lastUpdate = update.Id
 				}
-				go b.handleCommand(update.Message)
-			} else if update.CallbackQuery != nil {
-				go b.handleCallback(update.CallbackQuery)
+				if update.Message != nil {
+					if !strings.HasPrefix(update.Message.Text, "/") {
+						continue
+					}
+					go b.handleCommand(update.Message)
+				} else if update.CallbackQuery != nil {
+					go b.handleCallback(update.CallbackQuery)
+				}
 			}
 		}
 

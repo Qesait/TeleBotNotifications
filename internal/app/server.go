@@ -1,12 +1,18 @@
 package app
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
 	"TeleBotNotifications/internal/config"
 	"TeleBotNotifications/internal/db"
 	"TeleBotNotifications/internal/logger"
 	"TeleBotNotifications/internal/spotify"
 	"TeleBotNotifications/internal/telegram"
-	"fmt"
 )
 
 type Server struct {
@@ -43,13 +49,42 @@ func New() (*Server, error) {
 }
 
 func (s *Server) Run() {
-	s.bot.AddCommand("auth", "submit an authentication link", s.GetCodeFromUrl)
-	s.bot.AddCommand("start", "Get a link to steal your account", s.Greet)
-	s.bot.AddCallback("queue", s.AddToQueue)
-	s.bot.AddCallback("play", s.PlayTrack)
+	err := s.db.Load()
+	if err != nil {
+		logger.Error.Println("db load error", err)
+		return
+	}
 
-	go s.bot.Run(s.config.Port)
-	s.db.Load()
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
 
-	s.CheckNewReleases()
+	// Handle termination signals
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start goroutines
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.bot.AddCommand("auth", "submit an authentication link", s.GetCodeFromUrl)
+		s.bot.AddCommand("start", "Get a link to steal your account", s.Greet)
+		s.bot.AddCallback("queue", s.AddToQueue)
+		s.bot.AddCallback("play", s.PlayTrack)
+
+		s.bot.Run(s.config.Port, ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.CheckNewReleases(ctx)
+	}()
+
+	// Wait for termination signal
+	<-sigs
+	logger.General.Println("Shutdown signal received, exiting...")
+	cancel() // Send cancellation signal to goroutines
+
+	wg.Wait() // Wait for all goroutines to finish
+	logger.General.Println("Application shutdown gracefully")
 }

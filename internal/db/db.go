@@ -1,20 +1,22 @@
 package db
 
 import (
-	"TeleBotNotifications/internal/logger"
-	"TeleBotNotifications/internal/spotify"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"sync"
+	"time"
+
+	"TeleBotNotifications/internal/logger"
+	"TeleBotNotifications/internal/spotify"
 )
 
 type User struct {
 	UserId    int                 `json:"user_id"`
 	ChatId    int                 `json:"chat_id"`
 	Token     spotify.OAuth2Token `json:"token"`
-	LastCheck string              `json:"last_check"`
+	LastCheck time.Time           `json:"last_check"`
 }
 
 type DB struct {

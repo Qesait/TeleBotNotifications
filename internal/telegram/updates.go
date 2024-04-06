@@ -64,6 +64,7 @@ func (b *Bot) createUpdateUrl() string {
 	return u.String()
 }
 
+// https://core.telegram.org/bots/api#getupdates
 func (b *Bot) getNewUpdates() ([]update, error) {
 	requestUrl := b.createUpdateUrl()
 	response, err := b.http_client.Get(requestUrl)
