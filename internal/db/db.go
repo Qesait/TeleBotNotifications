@@ -4,100 +4,66 @@ import (
 	"TeleBotNotifications/internal/logger"
 	"TeleBotNotifications/internal/spotify"
 	"encoding/json"
-	"errors"
 	"io"
+	"fmt"
 	"os"
 	"sync"
-	"time"
 )
 
-type User struct {
+type DB struct {
 	UserId    int                 `json:"user_id"`
 	ChatId    int                 `json:"chat_id"`
 	Token     spotify.OAuth2Token `json:"token"`
 	LastCheck string              `json:"last_check"`
-}
-
-type DB struct {
-	users    []User
-	saveFile string
-	nextUser int
-	mu       sync.Mutex
+	saveFile  string
+	mu        sync.Mutex
 }
 
 func NewDB(saveFile string) DB {
-	return DB{saveFile: saveFile, nextUser: 0}
+	return DB{saveFile: saveFile}
 }
 
-func (db *DB) Get(userId int) (*User, error) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	for _, user := range db.users {
-		if user.UserId == userId {
-			return &user, nil
-		}
-	}
-	return nil, errors.New("user not found")
-}
-
-func (db *DB) Load() {
+func (db *DB) Load() error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
-		logger.Error.Println("db load error: ", err)
-		return
+		// logger.Error.Println("db load error: ", err)
+		return fmt.Errorf("db load | can't open save file: %w", err)
 	}
 	defer jsonFile.Close()
 
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		logger.Error.Println("db load error: ", err)
+		// logger.Error.Println("db load error: ", err)
+		return fmt.Errorf("db load | can't read save file: %w", err)
 	}
-	err = json.Unmarshal(byteValue, &db.users)
+	err = json.Unmarshal(byteValue, &db)
 	if err != nil {
-		logger.Error.Println("db load error: ", err)
+		// logger.Error.Println("db load error: ", err)
+		return fmt.Errorf("db load | wrong save file format: %w", err)
 	}
 	logger.General.Println("db loaded")
+	return nil
 }
 
-func (db *DB) save() {
+func (db *DB) save() error {
 	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
-		logger.Error.Println("db save error: ", err)
-		return
+		// logger.Error.Println("db save error: ", err)
+		return fmt.Errorf("db save | can't open save file: %w", err)
 	}
 	defer jsonFile.Close()
-
-	byteValue, err := json.Marshal(db.users)
-
+	
+	byteValue, err := json.Marshal(db)
 	if err != nil {
-		logger.Error.Println("db save error: ", err)
-		return
+		// logger.Error.Println("db save error: ", err)
+		return fmt.Errorf("db save | can't marshal save data: %w", err)
 	}
-	jsonFile.Write(byteValue)
+	_, err = jsonFile.Write(byteValue)
+	if err != nil {
+		return fmt.Errorf("db save | can't write into save file: %w", err)
+	}
 	logger.General.Println("db saved")
-}
-
-func (db *DB) AddUser(user User) {
-	db.mu.Lock()
-	db.users = append(db.users, user)
-	db.save()
-	db.mu.Unlock()
-}
-
-func (db *DB) NextUser() *User {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	if len(db.users) == 0 {
-		return nil
-	}
-
-	user := db.users[db.nextUser]
-	updatedUser := user
-	updatedUser.LastCheck = time.Now().Format("2006-01-02 15:04 -0700 MST")
-	db.users[db.nextUser] = updatedUser
-	defer db.save()
-	db.nextUser = (db.nextUser + 1) % len(db.users)
-	return &user
+	return nil
 }
