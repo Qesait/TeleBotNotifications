@@ -4,8 +4,8 @@ import (
 	"TeleBotNotifications/internal/logger"
 	"TeleBotNotifications/internal/spotify"
 	"encoding/json"
-	"io"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 )
@@ -28,19 +28,16 @@ func (db *DB) Load() error {
 	defer db.mu.Unlock()
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
-		// logger.Error.Println("db load error: ", err)
 		return fmt.Errorf("db load | can't open save file: %w", err)
 	}
 	defer jsonFile.Close()
 
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		// logger.Error.Println("db load error: ", err)
 		return fmt.Errorf("db load | can't read save file: %w", err)
 	}
 	err = json.Unmarshal(byteValue, &db)
 	if err != nil {
-		// logger.Error.Println("db load error: ", err)
 		return fmt.Errorf("db load | wrong save file format: %w", err)
 	}
 	logger.General.Println("db loaded")
@@ -48,16 +45,16 @@ func (db *DB) Load() error {
 }
 
 func (db *DB) save() error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	jsonFile, err := os.Create(db.saveFile)
 	if err != nil {
-		// logger.Error.Println("db save error: ", err)
 		return fmt.Errorf("db save | can't open save file: %w", err)
 	}
 	defer jsonFile.Close()
-	
-	byteValue, err := json.Marshal(db)
+
+	byteValue, err := json.MarshalIndent(db, "", "    ")
 	if err != nil {
-		// logger.Error.Println("db save error: ", err)
 		return fmt.Errorf("db save | can't marshal save data: %w", err)
 	}
 	_, err = jsonFile.Write(byteValue)
