@@ -35,7 +35,8 @@ func (db *DB) Load() error {
 
 	jsonFile, err := os.Open(db.saveFile)
 	if err != nil {
-		return fmt.Errorf("can't open save file: %w", err)
+		logger.Error.Printf("can't open save file: %w\n", err)
+		return nil
 	}
 	defer jsonFile.Close()
 
@@ -49,7 +50,6 @@ func (db *DB) Load() error {
 		return fmt.Errorf("wrong save file format: %w", err)
 	}
 	db.user = user
-	logger.General.Println("db loaded")
 	return nil
 }
 

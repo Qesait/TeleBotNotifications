@@ -64,6 +64,7 @@ func NewConfig() (*Config, error) {
 	if err := LoadConfigFromEnv(config); err != nil {
 		return nil, fmt.Errorf("error loading env: %v", err)
 	}
+	config.Logger.Path = fmt.Sprintf("%s/logs", config.WorkingDirectory)
 
 	err = config.readJson()
 	if err != nil {

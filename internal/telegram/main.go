@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,7 +11,7 @@ import (
 	"strings"
 
 	"TeleBotNotifications/internal/config"
-	"TeleBotNotifications/internal/logger"
+	// "TeleBotNotifications/internal/logger"
 )
 
 var apiURL = "https://api.telegram.org"
@@ -21,7 +22,7 @@ type Bot struct {
 	callbacks   []callback
 	http_client *http.Client
 	timeout     int
-	adminChatId int
+	ChatId      int
 	lastUpdate  int
 }
 
@@ -30,50 +31,43 @@ func NewBot(config *config.TelegramConfig) Bot {
 		token:       config.BotToken,
 		http_client: &http.Client{},
 		timeout:     config.Timeout,
-		adminChatId: config.ChatId,
+		ChatId:      config.ChatId,
 		lastUpdate:  0,
 	}
 }
 
-func (b *Bot) Run(port uint, ctx context.Context) {
-	err := b.UpdateCommands()
+func (b *Bot) HandleUpdates(ctx context.Context) error {
+	updates, err := b.getNewUpdates(ctx)
 	if err != nil {
-		logger.Error.Println(err)
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
+		return fmt.Errorf("telegram update fetch failed with error: %w", err)
 	}
-	logger.General.Println("Telegram bot started")
 
-	for {
+	for _, update := range updates {
 		select {
 		case <-ctx.Done():
-			logger.General.Println("Telegram bot stopped")
-			return
+			return context.Canceled
 		default:
-			updates, err := b.getNewUpdates()
-			if err != nil {
-				logger.Error.Println("telegram update fetch failed with error: ", err)
-				continue
+			if update.Id > b.lastUpdate {
+				b.lastUpdate = update.Id
 			}
-
-			for _, update := range updates {
-				if update.Id > b.lastUpdate {
-					b.lastUpdate = update.Id
+			if update.Message != nil {
+				if !strings.HasPrefix(update.Message.Text, "/") {
+					continue
 				}
-				if update.Message != nil {
-					if !strings.HasPrefix(update.Message.Text, "/") {
-						continue
-					}
-					go b.handleCommand(update.Message)
-				} else if update.CallbackQuery != nil {
-					go b.handleCallback(update.CallbackQuery)
-				}
+				go b.handleCommand(update.Message)
+			} else if update.CallbackQuery != nil {
+				go b.handleCallback(update.CallbackQuery)
 			}
 		}
-
 	}
+	return nil
 }
 
 type BotMessage struct {
-	ChatId                int
+	chatId                int
 	Text                  string
 	ParseMode             *string
 	DisableWebPagePreview *bool
@@ -85,7 +79,7 @@ type BotMessage struct {
 func (m *BotMessage) BuildURL(token string) string {
 	resource := fmt.Sprintf("/bot%s/sendMessage", token)
 	params := url.Values{
-		"chat_id": {strconv.Itoa(m.ChatId)},
+		"chat_id": {strconv.Itoa(m.chatId)},
 		"text":    {m.Text},
 	}
 	if m.ParseMode != nil {
@@ -111,6 +105,7 @@ func (m *BotMessage) BuildURL(token string) string {
 }
 
 func (b *Bot) SendMessage(message BotMessage) error {
+	message.chatId = b.ChatId
 	url := message.BuildURL(b.token)
 	response, err := http.Get(url)
 	if err != nil {
@@ -130,7 +125,7 @@ func (b *Bot) SendMessage(message BotMessage) error {
 }
 
 func (b *Bot) Write(p []byte) (n int, err error) {
-	err = b.SendMessage(BotMessage{ChatId: b.adminChatId, Text: string(p)})
+	err = b.SendMessage(BotMessage{Text: string(p)})
 	if err != nil {
 		return 0, err
 	}
