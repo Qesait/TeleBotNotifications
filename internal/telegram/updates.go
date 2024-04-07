@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"context"
+	"errors"
 	"strconv"
 )
 
@@ -64,12 +66,21 @@ func (b *Bot) createUpdateUrl() string {
 	return u.String()
 }
 
-func (b *Bot) getNewUpdates() ([]update, error) {
+// https://core.telegram.org/bots/api#getupdates
+func (b *Bot) getNewUpdates(ctx context.Context) ([]update, error) {
 	requestUrl := b.createUpdateUrl()
-	response, err := b.http_client.Get(requestUrl)
-	if err != nil {
-		return nil, fmt.Errorf("sending request failed with err: %s", err)
-	}
+    req, err := http.NewRequestWithContext(ctx, "GET", requestUrl, nil)
+    if err != nil {
+        return nil, fmt.Errorf("creating request failed with err: %s", err)
+    }
+
+    response, err := b.http_client.Do(req)
+    if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, fmt.Errorf("request was canceled: %w", err)
+		}
+        return nil, fmt.Errorf("sending request failed with err: %s", err)
+    }
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
