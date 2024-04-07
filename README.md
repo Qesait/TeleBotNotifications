@@ -17,3 +17,9 @@ Maybe:
 - Оформление сообщений без web page preview 
 - Настройки
 - Добавление новых релизов в плейлист и автоматическое удаление после прослушивания, напоминания
+
+
+
+# Github access tocken
+https://github.com/settings/tokens/new
+repo + write:packages
