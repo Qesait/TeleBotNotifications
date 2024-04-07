@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.21-alpine AS builder
 COPY . /TeleBotNotifications/
 WORKDIR /TeleBotNotifications/
 RUN go build -o ./.bin/bot cmd/main.go
