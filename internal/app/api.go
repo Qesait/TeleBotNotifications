@@ -81,9 +81,9 @@ func (s *Server) ForceCheck(message telegram.ReceivedMessage) {
 	} else {
 		days, err = strconv.Atoi(strings.TrimSpace(message.Text))
 	}
-	if err != nil {
+	if err != nil || days < 0 {
 		err = s.bot.SendMessage(telegram.BotMessage{
-			Text: "Wrong command parameter. It must be a number",
+			Text: "Wrong command parameter. It must be a positive number",
 		})
 		if err != nil {
 			logger.Error.Println("error sending auth response: ", err)
@@ -112,7 +112,7 @@ func (s *Server) CheckNewReleases(offset *time.Duration) {
 	if offset == nil {
 		rangeStart = user.LastCheck
 	} else {
-		rangeStart = checkStart.Add(*offset)
+		rangeStart = checkStart.Add(-*offset)
 	}
 	rangeStartDate := stripTime(rangeStart)
 	if !checkStartDate.Before(rangeStartDate) {
