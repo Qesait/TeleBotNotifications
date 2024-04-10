@@ -23,6 +23,7 @@ type Server struct {
 	db                 db.DB
 	config             *config.Config
 	cancelSpotifyCheck context.CancelFunc
+	wg                 sync.WaitGroup
 }
 
 func New() (*Server, error) {
@@ -63,12 +64,13 @@ func (s *Server) Run() {
 
 	// For stopping goroutins on exit signal
 	generalContext, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	s.bot.AddCommand("auth", "submit an authentication link", s.GetCodeFromUrl)
 	s.bot.AddCommand("start", "Get a link to steal your account", s.Greet)
+	s.bot.AddCommand("check", "Find new releses in the past n days (default 7)", s.ForceCheck)
+	
 	s.bot.AddCallback("queue", s.AddToQueue)
 	s.bot.AddCallback("play", s.PlayTrack)
 
@@ -80,7 +82,8 @@ func (s *Server) Run() {
 
 	tgUpdateSignal := make(chan struct{}, 1)
 	tgUpdateSignal <- struct{}{}
-	ticker := time.NewTicker(70 * time.Second)
+	// TODO: make config variable
+	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 
 	logger.General.Println("Bot started")
@@ -95,9 +98,9 @@ Loop:
 			}
 			break Loop
 		case <-tgUpdateSignal:
-			wg.Add(1)
+			s.wg.Add(1)
 			go func() {
-				defer wg.Done()
+				defer s.wg.Done()
 				err := s.bot.HandleUpdates(generalContext)
 				if err != nil {
 					if errors.Is(err, context.Canceled) {
@@ -114,43 +117,10 @@ Loop:
 				}
 			}()
 		case <-ticker.C:
-			// Check if update needed
-			user := s.db.Get()
-			checkStart := time.Now()
-			checkStartDate := stripTime(checkStart)
-			rangeStartDate := stripTime(user.LastCheck)
-			if checkStartDate == rangeStartDate {
-				break
-			}
-
-			// Create context for premature stop
-			spotifyContext, cancel := context.WithCancel(context.Background())
-			s.cancelSpotifyCheck = cancel
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				user.LastCheck = checkStart
-				s.db.Set(*user)
-				logger.General.Printf("Checking for new releases. From %s to %s\n", rangeStartDate.Format("2006-01-02"), checkStartDate.Format("2006-01-02"))
-
-				err := s.CheckNewReleases(user.Token, rangeStartDate, checkStartDate, spotifyContext)
-				if err != nil {
-					if errors.Is(err, context.Canceled) {
-						return
-					}
-					logger.Error.Println("Finished checking for new releases with error:", err)
-					return
-				}
-				logger.General.Println("Finished checking for new releases")
-				err = s.db.Save()
-				if err != nil {
-					logger.Error.Println("db save failed:", err)
-				}
-			}()
+			s.CheckNewReleases(nil)
 		}
 	}
 
-	wg.Wait()
+	s.wg.Wait()
 	logger.Error.Println("Bot stopped")
 }
