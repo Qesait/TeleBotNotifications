@@ -11,6 +11,7 @@ import (
 
 	"TeleBotNotifications/internal/db"
 	"TeleBotNotifications/internal/logger"
+	"TeleBotNotifications/internal/spotify"
 	"TeleBotNotifications/internal/telegram"
 )
 
@@ -81,6 +82,7 @@ func (s *Server) ForceCheck(message telegram.ReceivedMessage) {
 	} else {
 		days, err = strconv.Atoi(strings.TrimSpace(message.Text))
 	}
+	
 	if err != nil || days < 0 {
 		err = s.bot.SendMessage(telegram.BotMessage{
 			Text: "Wrong command parameter. It must be a positive number",
@@ -96,7 +98,7 @@ func (s *Server) ForceCheck(message telegram.ReceivedMessage) {
 	}
 
 	offset := time.Duration(days) * 24 * time.Hour
-	s.CheckNewReleases(&offset)
+	s.CheckNewReleases(&offset, true)
 }
 
 func stripTime(t time.Time) time.Time {
@@ -104,18 +106,18 @@ func stripTime(t time.Time) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
 }
 
-func (s *Server) CheckNewReleases(offset *time.Duration) {
+func (s *Server) CheckNewReleases(offset *time.Duration, notifications bool) {
 	user := s.db.Get()
-	checkStart := time.Now()
-	checkStartDate := stripTime(checkStart)
+	rangeEnd := time.Now()
+	rangeEndDate := stripTime(rangeEnd)
 	var rangeStart time.Time
 	if offset == nil {
 		rangeStart = user.LastCheck
 	} else {
-		rangeStart = checkStart.Add(-*offset)
+		rangeStart = rangeEnd.Add(-*offset)
 	}
 	rangeStartDate := stripTime(rangeStart)
-	if !checkStartDate.Before(rangeStartDate) {
+	if !rangeEndDate.After(rangeStartDate) {
 		return
 	}
 
@@ -126,11 +128,16 @@ func (s *Server) CheckNewReleases(offset *time.Duration) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		user.LastCheck = checkStart
+		user.LastCheck = rangeEnd
 		s.db.Set(*user)
-		logger.General.Printf("Checking for new releases. From %s to %s\n", rangeStartDate.Format("2006-01-02"), checkStartDate.Format("2006-01-02"))
 
-		newAlbums, err := s.spotifyClient.GetNewReleases(user.Token, rangeStartDate, checkStartDate, spotifyContext)
+		message:=fmt.Sprintf("Checking for new releases. From %s to %s", rangeStartDate.Format("2006-01-02"), rangeEndDate.Format("2006-01-02"))
+		logger.General.Println(message)
+		if notifications {
+			s.bot.SendMessage(telegram.BotMessage{Text: message})
+		}
+
+		newAlbums, err := s.spotifyClient.GetNewReleases(user.Token, rangeStartDate, rangeEndDate, spotifyContext)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				// TODO: maybe print something in general log before death
@@ -139,32 +146,42 @@ func (s *Server) CheckNewReleases(offset *time.Duration) {
 			logger.Error.Println("Failed to get new releases with error:", err)
 			return
 		}
-		for _, album := range newAlbums {
-			select {
-			case <-spotifyContext.Done():
-				return
-			default:
-				// TODO: show all artist, or verify that first is main
-				logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, album.Artists[0].Name, album.ReleaseDate.Format("02.01.2006"))
-				parseMode := "Markdown"
-				message := telegram.BotMessage{
-					Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
-					ParseMode:   &parseMode,
-					ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+album.Uri), telegram.CallbackButton("Add to queue", "/queue "+album.Id)),
-				}
-				// TODO: async sending messages
-				err := s.bot.SendMessage(message)
-				if err != nil {
-					logger.Error.Println("error sending message with new release:", err)
-				}
-			}
+
+		message = fmt.Sprintf("Found %d new releases", len(newAlbums))
+		logger.General.Println(message)
+		if notifications && len(newAlbums) == 0 {
+			s.bot.SendMessage(telegram.BotMessage{Text: message})
 		}
+		s.ShowAlbums(newAlbums, spotifyContext)
 		logger.General.Println("Finished checking for new releases")
 		err = s.db.Save()
 		if err != nil {
 			logger.Error.Println("db save failed:", err)
 		}
 	}()
+}
+
+func (s *Server) ShowAlbums(albums []spotify.Album, ctx context.Context) {
+	for _, album := range albums {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// TODO: show all artist, or verify that first is main
+			logger.General.Printf("\x1b[34mNew release '%s'\tby %s\tfrom %s\n\x1b[0m", album.Name, album.Artists[0].Name, album.ReleaseDate.Format("02.01.2006"))
+			parseMode := "Markdown"
+			message := telegram.BotMessage{
+				Text:        fmt.Sprintf("*%s* · %s[ㅤ](%s)", escapeCharacters(album.Name), escapeCharacters(album.Artists[0].Name), album.Url),
+				ParseMode:   &parseMode,
+				ReplyMarkup: telegram.ButtonRow(telegram.CallbackButton("Play", "/play "+album.Uri), telegram.CallbackButton("Add to queue", "/queue "+album.Id)),
+			}
+			// TODO: async sending messages
+			err := s.bot.SendMessage(message)
+			if err != nil {
+				logger.Error.Println("error sending message with new release:", err)
+			}
+		}
+	}
 }
 
 func escapeCharacters(raw string) string {
